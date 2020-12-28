@@ -1,9 +1,11 @@
 package scanner
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"net/url"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -109,8 +111,6 @@ func Scan(url string, requestMethod string, threads int, silent bool) (files []s
 							}
 						}
 					}
-				} else {
-					continue
 				}
 
 			}
@@ -157,7 +157,20 @@ func Run(scanURL string, threads int, silent bool) {
 	}
 }
 
-// BulkScan scans multiple targets
-func BulkScan(filePath string) {
-	fmt.Println("Bulk Scanning: " + filePath)
+// BulkScan prints the output of a bulk scan
+func BulkScan(filePath string, threads int, silent bool) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		Run(scanner.Text(), threads, silent)
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
 }

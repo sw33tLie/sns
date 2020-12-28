@@ -48,7 +48,7 @@ var rootCmd = &cobra.Command{
 		}
 
 		if file != "" {
-			scanner.BulkScan(file)
+			scanner.BulkScan(file, threads, silent)
 			return
 		}
 	},
