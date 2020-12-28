@@ -86,7 +86,7 @@ func Scan(url string, requestMethod string, threads int, silent bool, timeout in
 
 				qElem := q.(queueElem)
 
-				fmt.Printf("\r" + qElem.path)
+				fmt.Printf("\r /" + qElem.path)
 				sc, _ := utils.HTTPRequest(requestMethod, qElem.url+qElem.path+"*~1"+qElem.ext+"/1.aspx", "", timeout)
 				incrementRequestsCounter(1)
 
@@ -101,12 +101,12 @@ func Scan(url string, requestMethod string, threads int, silent bool, timeout in
 						}
 						if qElem.ext == "" {
 							if !silent {
-								fmt.Println("\r[x] " + qElem.path + "~1 (Directory)")
+								fmt.Println("\r - " + qElem.path + "~1 (Directory)")
 							}
 							dirs = append(dirs, qElem.path+"~1")
 						} else if len(qElem.ext) == 5 || !(strings.HasSuffix(qElem.ext, "*")) {
 							if !silent {
-								fmt.Println("\r[x] " + qElem.path + "~1" + qElem.ext + " (File)")
+								fmt.Println("\r - " + qElem.path + "~1" + qElem.ext + " (File)")
 							}
 							files = append(files, qElem.path+"~1"+qElem.ext)
 						} else {
@@ -132,7 +132,7 @@ func Scan(url string, requestMethod string, threads int, silent bool, timeout in
 }
 
 // Run prints the output of a scan
-func Run(scanURL string, threads int, silent bool, timeout int) {
+func Run(scanURL string, threads int, silent bool, timeout int, proxy string) {
 	startTime := time.Now()
 
 	parsedURL, err := url.Parse(scanURL)
@@ -148,6 +148,11 @@ func Run(scanURL string, threads int, silent bool, timeout int) {
 
 	if !silent {
 		printBanner()
+		if proxy == "" {
+			fmt.Println(" Proxy:  ", "None")
+		} else {
+			fmt.Println(" Proxy:  ", proxy)
+		}
 		fmt.Println(" Target: ", scanURL)
 		fmt.Println(" Threads:", threads)
 		fmt.Println(" Timeout:", timeout)
@@ -175,7 +180,7 @@ func Run(scanURL string, threads int, silent bool, timeout int) {
 }
 
 // BulkScan prints the output of a bulk scan
-func BulkScan(filePath string, threads int, silent bool, timeout int) {
+func BulkScan(filePath string, threads int, silent bool, timeout int, proxy string) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		log.Fatal(err)
@@ -184,7 +189,7 @@ func BulkScan(filePath string, threads int, silent bool, timeout int) {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		Run(scanner.Text(), threads, silent, timeout)
+		Run(scanner.Text(), threads, silent, timeout, proxy)
 	}
 
 	if err := scanner.Err(); err != nil {

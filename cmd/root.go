@@ -44,12 +44,12 @@ var rootCmd = &cobra.Command{
 		}
 
 		if scanURL != "" {
-			scanner.Run(scanURL, threads, silent, timeout)
+			scanner.Run(scanURL, threads, silent, timeout, proxy)
 			return
 		}
 
 		if file != "" {
-			scanner.BulkScan(file, threads, silent, timeout)
+			scanner.BulkScan(file, threads, silent, timeout, proxy)
 			return
 		}
 	},

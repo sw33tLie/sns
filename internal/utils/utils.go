@@ -20,6 +20,7 @@ func Abs(x int) int {
 func HTTPRequest(method string, url string, data string, timeoutSeconds int) (statusCode int, responseBody string) {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		Proxy:           http.DefaultTransport.(*http.Transport).Proxy,
 	}
 	client := &http.Client{
 		Transport: tr,
