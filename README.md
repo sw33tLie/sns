@@ -4,7 +4,7 @@ IIS shortname scanner written in Go
 ## Installation
 Make sure you've a recent version of the Go compiler installed on your system. Then just run:
 ```
-GO111MODULE=on go get -u github.com/sw33tLie/bbscope
+GO111MODULE=on go get -u github.com/sw33tLie/sns
 ```
 
 ## Usage
