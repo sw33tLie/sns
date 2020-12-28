@@ -25,9 +25,10 @@ var rootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		file, _ := cmd.Flags().GetString("file")
 		proxy, _ := cmd.Flags().GetString("proxy")
+		scanURL, _ := cmd.Flags().GetString("url")
 		silent, _ := cmd.Flags().GetBool("silent")
 		threads, _ := cmd.Flags().GetInt("threads")
-		scanURL, _ := cmd.Flags().GetString("url")
+		timeout, _ := cmd.Flags().GetInt("timeout")
 
 		if scanURL == "" && file == "" {
 			log.Fatal("No URL(s) to scan provided")
@@ -43,12 +44,12 @@ var rootCmd = &cobra.Command{
 		}
 
 		if scanURL != "" {
-			scanner.Run(scanURL, threads, silent)
+			scanner.Run(scanURL, threads, silent, timeout)
 			return
 		}
 
 		if file != "" {
-			scanner.BulkScan(file, threads, silent)
+			scanner.BulkScan(file, threads, silent, timeout)
 			return
 		}
 	},
@@ -71,10 +72,11 @@ func init() {
 	// will be global for your application.
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.sns.yaml)")
-	rootCmd.Flags().StringP("url", "u", "", "URL to scan")
 	rootCmd.Flags().StringP("file", "f", "", "File containing URLs to scan")
 	rootCmd.Flags().StringP("proxy", "", "", "HTTP Proxy (Useful for debugging. Example: http://127.0.0.1:8080)")
+	rootCmd.Flags().StringP("url", "u", "", "URL to scan")
 	rootCmd.Flags().IntP("threads", "t", 50, "Threads")
+	rootCmd.Flags().IntP("timeout", "", 10, "HTTP requests timeout")
 	rootCmd.Flags().BoolP("color", "c", false, "Use colored output")
 	rootCmd.Flags().BoolP("silent", "s", false, "Silent output")
 	rootCmd.Flags().BoolP("banner", "b", false, "Silent output")

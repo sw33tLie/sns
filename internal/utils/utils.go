@@ -17,11 +17,14 @@ func Abs(x int) int {
 }
 
 // HTTPRequest Send an HTTP request
-func HTTPRequest(method string, url string, data string) (statusCode int, responseBody string) {
+func HTTPRequest(method string, url string, data string, timeoutSeconds int) (statusCode int, responseBody string) {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
-	client := &http.Client{Transport: tr, Timeout: 10 * 1000 * time.Millisecond}
+	client := &http.Client{
+		Transport: tr,
+		Timeout:   time.Duration(timeoutSeconds) * time.Second,
+	}
 
 	req, err := http.NewRequest(method, url, bytes.NewBuffer([]byte(data)))
 	if err != nil {

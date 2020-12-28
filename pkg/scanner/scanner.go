@@ -25,6 +25,7 @@ const (
  / __| '_ \/ __|
  \__ \ | | \__ \
  |___/_| |_|___/ v1.0`
+	bar = "________________________________________________"
 )
 
 type queueElem struct {
@@ -34,7 +35,7 @@ type queueElem struct {
 }
 
 func printBanner() {
-	fmt.Println(bannerLogo + "\n\n IIS shortname scanner by sw33tLie")
+	fmt.Println(bannerLogo + "\n\n IIS shortname scanner by sw33tLie\n" + bar + "\n")
 }
 
 var requestsCounter int
@@ -47,14 +48,14 @@ func incrementRequestsCounter(by int) {
 }
 
 // CheckIfVulnerable checks if a target is vulnerable
-func CheckIfVulnerable(url string) (result bool, method string) {
+func CheckIfVulnerable(url string, timeout int) (result bool, method string) {
 	asteriskSymbol := "*"
 
 	for _, requestMethod := range requestMethods {
 		for _, magicFinalPart := range magicFinalParts {
 			// First Request
-			validStatus, validBody := utils.HTTPRequest(requestMethod, url+asteriskSymbol+"~1"+asteriskSymbol+magicFinalPart, "")
-			invalidStatus, invalidBody := utils.HTTPRequest(requestMethod, url+"/1234567890"+asteriskSymbol+"~1"+asteriskSymbol+magicFinalPart, "")
+			validStatus, validBody := utils.HTTPRequest(requestMethod, url+asteriskSymbol+"~1"+asteriskSymbol+magicFinalPart, "", timeout)
+			invalidStatus, invalidBody := utils.HTTPRequest(requestMethod, url+"/1234567890"+asteriskSymbol+"~1"+asteriskSymbol+magicFinalPart, "", timeout)
 			incrementRequestsCounter(2)
 
 			acceptedDiffLength := 10
@@ -68,7 +69,7 @@ func CheckIfVulnerable(url string) (result bool, method string) {
 	return false, ""
 }
 
-func Scan(url string, requestMethod string, threads int, silent bool) (files []string, dirs []string) {
+func Scan(url string, requestMethod string, threads int, silent bool, timeout int) (files []string, dirs []string) {
 	queue := goconcurrentqueue.NewFIFO()
 
 	for _, char := range alphanum {
@@ -80,18 +81,12 @@ func Scan(url string, requestMethod string, threads int, silent bool) (files []s
 
 	for i := 0; i < threads; i++ {
 		go func() {
-
-			for {
+			for queue.GetLen() > 0 {
 				q, _ := queue.Dequeue()
-
-				// If the queue is empty
-				if q == nil {
-					break
-				}
 
 				qElem := q.(queueElem)
 
-				sc, _ := utils.HTTPRequest(requestMethod, qElem.url+qElem.path+"*~1"+qElem.ext+"/1.aspx", "")
+				sc, _ := utils.HTTPRequest(requestMethod, qElem.url+qElem.path+"*~1"+qElem.ext+"/1.aspx", "", timeout)
 				incrementRequestsCounter(1)
 
 				if sc == 404 {
@@ -123,7 +118,6 @@ func Scan(url string, requestMethod string, threads int, silent bool) (files []s
 						}
 					}
 				}
-
 			}
 			processGroup.Done()
 		}()
@@ -137,12 +131,15 @@ func Scan(url string, requestMethod string, threads int, silent bool) (files []s
 }
 
 // Run prints the output of a scan
-func Run(scanURL string, threads int, silent bool) {
+func Run(scanURL string, threads int, silent bool, timeout int) {
 	startTime := time.Now()
 
 	if !silent {
 		printBanner()
-		fmt.Println("Scanning: " + scanURL)
+		fmt.Println(" Target: ", scanURL)
+		fmt.Println(" Timeout:", timeout)
+
+		fmt.Println(bar + "\n")
 	}
 
 	parsedURL, err := url.Parse(scanURL)
@@ -155,7 +152,7 @@ func Run(scanURL string, threads int, silent bool) {
 
 	// The URL must end with /, and we ignore anything after ?
 	scanURL = parsedURL.Scheme + "://" + parsedURL.Host + strings.TrimSuffix(parsedURL.Path, "/") + "/"
-	vulnerable, requestMethod := CheckIfVulnerable(scanURL)
+	vulnerable, requestMethod := CheckIfVulnerable(scanURL, timeout)
 
 	if !vulnerable {
 		if !silent {
@@ -164,18 +161,18 @@ func Run(scanURL string, threads int, silent bool) {
 		return
 	}
 
-	dirs, files := Scan(scanURL, requestMethod, threads, silent)
+	dirs, files := Scan(scanURL, requestMethod, threads, silent, timeout)
 
-	fmt.Println("Directories (" + strconv.Itoa(len(dirs)) + "):\n " + strings.Join(files, "\n ") + "\nFiles (" + strconv.Itoa(len(files)) + "):\n " + strings.Join(dirs, "\n "))
+	fmt.Println("\n" + bar + "\n\nDirectories (" + strconv.Itoa(len(dirs)) + "):\n =======\n" + strings.Join(files, "\n ") + "\n\nFiles (" + strconv.Itoa(len(files)) + "):\n =======\n" + strings.Join(dirs, "\n "))
 
 	endTime := time.Now()
 	if !silent {
-		fmt.Println("Done! Requests: ", requestsCounter, " Time: ", endTime.Sub(startTime))
+		fmt.Println("Done! Requests:", requestsCounter, " Time:", endTime.Sub(startTime))
 	}
 }
 
 // BulkScan prints the output of a bulk scan
-func BulkScan(filePath string, threads int, silent bool) {
+func BulkScan(filePath string, threads int, silent bool, timeout int) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		log.Fatal(err)
@@ -184,7 +181,7 @@ func BulkScan(filePath string, threads int, silent bool) {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		Run(scanner.Text(), threads, silent)
+		Run(scanner.Text(), threads, silent, timeout)
 	}
 
 	if err := scanner.Err(); err != nil {
