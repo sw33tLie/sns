@@ -3,6 +3,7 @@ package scanner
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -140,7 +141,7 @@ func Run(url string, threads int) {
 	dirs, files := Scan(url, requestMethod, threads)
 	// Add to queue
 
-	fmt.Println("Directories (x):\n" + strings.Join(files, "\n") + "\nFiles (y)" + strings.Join(dirs, "\n"))
+	fmt.Println("Directories (" + strconv.Itoa(len(dirs)) + "):\n" + strings.Join(files, "\n ") + "\nFiles (" + strconv.Itoa(len(files)) + "):\n" + strings.Join(dirs, "\n "))
 }
 
 // BulkScan scans multiple targets
