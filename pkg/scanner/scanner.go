@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/enriquebris/goconcurrentqueue"
 	"github.com/sw33tLie/sns/internal/utils"
@@ -34,9 +35,6 @@ func CheckIfVulnerable(url string) (result bool, method string) {
 			invalidStatus, invalidBody := utils.HTTPRequest(requestMethod, url+"/1234567890"+asteriskSymbol+"~1"+asteriskSymbol+magicFinalPart, "")
 
 			acceptedDiffLength := 10
-			// Logic
-			fmt.Println(validStatus)
-			fmt.Println(invalidStatus)
 
 			if validStatus != invalidStatus && !(acceptedDiffLength >= 0 && utils.Abs(len(invalidBody)-len(validBody)) <= acceptedDiffLength) {
 				return true, requestMethod
@@ -72,8 +70,6 @@ func Scan(url string, requestMethod string, threads int, silent bool) (files []s
 
 	processGroup := new(sync.WaitGroup)
 	processGroup.Add(threads)
-
-	fmt.Println(threads)
 
 	for i := 0; i < threads; i++ {
 		go func() {
@@ -136,6 +132,8 @@ func Scan(url string, requestMethod string, threads int, silent bool) (files []s
 
 // Run prints the output of a scan
 func Run(url string, threads int, silent bool) {
+	startTime := time.Now()
+
 	if !silent {
 		PrintBanner()
 		fmt.Println("Scanning: " + url)
@@ -151,8 +149,9 @@ func Run(url string, threads int, silent bool) {
 
 	fmt.Println("Directories (" + strconv.Itoa(len(dirs)) + "):\n" + strings.Join(files, "\n ") + "\nFiles (" + strconv.Itoa(len(files)) + "):\n" + strings.Join(dirs, "\n "))
 
+	endTime := time.Now()
 	if !silent {
-		fmt.Println("Took x seconds")
+		fmt.Println("Took ", endTime.Sub(startTime))
 	}
 }
 
