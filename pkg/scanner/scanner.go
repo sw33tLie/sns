@@ -27,6 +27,25 @@ const (
  |___/_| |_|___/ v1.0`
 )
 
+type queueElem struct {
+	url  string
+	path string
+	ext  string
+}
+
+func printBanner() {
+	fmt.Println(bannerLogo + "\n\n IIS shortname scanner by sw33tLie")
+}
+
+var requestsCounter int
+var requestsCounterMutex sync.Mutex
+
+func incrementRequestsCounter(by int) {
+	requestsCounterMutex.Lock()
+	defer requestsCounterMutex.Unlock()
+	requestsCounter += by
+}
+
 // CheckIfVulnerable checks if a target is vulnerable
 func CheckIfVulnerable(url string) (result bool, method string) {
 	asteriskSymbol := "*"
@@ -36,6 +55,7 @@ func CheckIfVulnerable(url string) (result bool, method string) {
 			// First Request
 			validStatus, validBody := utils.HTTPRequest(requestMethod, url+asteriskSymbol+"~1"+asteriskSymbol+magicFinalPart, "")
 			invalidStatus, invalidBody := utils.HTTPRequest(requestMethod, url+"/1234567890"+asteriskSymbol+"~1"+asteriskSymbol+magicFinalPart, "")
+			incrementRequestsCounter(2)
 
 			acceptedDiffLength := 10
 
@@ -46,16 +66,6 @@ func CheckIfVulnerable(url string) (result bool, method string) {
 		}
 	}
 	return false, ""
-}
-
-func printBanner() {
-	fmt.Println(bannerLogo + "\n\n IIS shortname scanner by sw33tLie")
-}
-
-type queueElem struct {
-	url  string
-	path string
-	ext  string
 }
 
 func Scan(url string, requestMethod string, threads int, silent bool) (files []string, dirs []string) {
@@ -82,6 +92,7 @@ func Scan(url string, requestMethod string, threads int, silent bool) (files []s
 				qElem := q.(queueElem)
 
 				sc, _ := utils.HTTPRequest(requestMethod, qElem.url+qElem.path+"*~1"+qElem.ext+"/1.aspx", "")
+				incrementRequestsCounter(1)
 
 				if sc == 404 {
 					if len(qElem.path) < 6 {
@@ -159,7 +170,7 @@ func Run(scanURL string, threads int, silent bool) {
 
 	endTime := time.Now()
 	if !silent {
-		fmt.Println("Done! Requests: "+"X"+" Time: ", endTime.Sub(startTime))
+		fmt.Println("Done! Requests: ", requestsCounter, " Time: ", endTime.Sub(startTime))
 	}
 }
 
