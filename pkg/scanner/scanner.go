@@ -134,14 +134,6 @@ func Scan(url string, requestMethod string, threads int, silent bool, timeout in
 func Run(scanURL string, threads int, silent bool, timeout int) {
 	startTime := time.Now()
 
-	if !silent {
-		printBanner()
-		fmt.Println(" Target: ", scanURL)
-		fmt.Println(" Timeout:", timeout)
-
-		fmt.Println(bar + "\n")
-	}
-
 	parsedURL, err := url.Parse(scanURL)
 	if err != nil {
 		if !silent {
@@ -152,6 +144,16 @@ func Run(scanURL string, threads int, silent bool, timeout int) {
 
 	// The URL must end with /, and we ignore anything after ?
 	scanURL = parsedURL.Scheme + "://" + parsedURL.Host + strings.TrimSuffix(parsedURL.Path, "/") + "/"
+
+	if !silent {
+		printBanner()
+		fmt.Println(" Target: ", scanURL)
+		fmt.Println(" Threads:", threads)
+		fmt.Println(" Timeout:", timeout)
+
+		fmt.Println(bar + "\n")
+	}
+
 	vulnerable, requestMethod := CheckIfVulnerable(scanURL, timeout)
 
 	if !vulnerable {
