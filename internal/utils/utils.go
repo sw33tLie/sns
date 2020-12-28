@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"io/ioutil"
 	"net/http"
+	"time"
 	"unicode/utf8"
 )
 
@@ -20,7 +21,7 @@ func HTTPRequest(method string, url string, data string) (statusCode int, respon
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
-	client := &http.Client{Transport: tr}
+	client := &http.Client{Transport: tr, Timeout: 10 * 1000 * time.Millisecond}
 
 	req, err := http.NewRequest(method, url, bytes.NewBuffer([]byte(data)))
 	if err != nil {

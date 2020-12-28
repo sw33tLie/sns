@@ -159,7 +159,7 @@ func Run(scanURL string, threads int, silent bool) {
 
 	endTime := time.Now()
 	if !silent {
-		fmt.Println("Took ", endTime.Sub(startTime))
+		fmt.Println("Done! Requests: "+"X"+" Time: ", endTime.Sub(startTime))
 	}
 }
 
