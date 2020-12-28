@@ -46,14 +46,8 @@ func CheckIfVulnerable(url string) (result bool, method string) {
 	return false, ""
 }
 
-func PrintBanner() {
+func printBanner() {
 	fmt.Println(bannerLogo + "\n\n IIS shortname scanner by sw33tLie")
-}
-
-func worker(a string) {
-	for true {
-
-	}
 }
 
 type queueElem struct {
@@ -78,7 +72,7 @@ func Scan(url string, requestMethod string, threads int, silent bool) (files []s
 			for {
 				q, _ := queue.Dequeue()
 
-				// If queue is empty
+				// If the queue is empty
 				if q == nil {
 					break
 				}
@@ -136,7 +130,7 @@ func Run(scanURL string, threads int, silent bool) {
 	startTime := time.Now()
 
 	if !silent {
-		PrintBanner()
+		printBanner()
 		fmt.Println("Scanning: " + scanURL)
 	}
 
