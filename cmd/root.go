@@ -29,7 +29,7 @@ var rootCmd = &cobra.Command{
 		}
 
 		if url != "" {
-			scanner.Scan(url, threads)
+			scanner.Run(url, threads)
 			return
 		}
 

@@ -2,6 +2,7 @@ package scanner
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 
@@ -60,14 +61,7 @@ type queueElem struct {
 	ext  string
 }
 
-// Scan scans a single URL
-func Scan(url string, threads int) {
-	PrintBanner()
-	fmt.Println("Scanning: " + url)
-	vulnerable, vulnerableMethod := CheckIfVulnerable(url)
-	fmt.Println(vulnerable)
-
-	// Add to queue
+func Scan(url string, requestMethod string, threads int) (files []string, dirs []string) {
 	queue := goconcurrentqueue.NewFIFO()
 
 	for _, char := range alphanum {
@@ -78,8 +72,6 @@ func Scan(url string, threads int) {
 	processGroup.Add(threads)
 
 	fmt.Println(threads)
-	var dirs []string
-	var files []string
 
 	for i := 0; i < threads; i++ {
 		go func() {
@@ -94,7 +86,7 @@ func Scan(url string, threads int) {
 
 				qElem := q.(queueElem)
 
-				sc, _ := utils.HTTPRequest(vulnerableMethod, qElem.url+qElem.path+"*~1"+qElem.ext+"/1.aspx", "")
+				sc, _ := utils.HTTPRequest(requestMethod, qElem.url+qElem.path+"*~1"+qElem.ext+"/1.aspx", "")
 				//fmt.Println(q)
 
 				//status = self._get_status(url + '*~1' + ext + '/1.aspx')
@@ -132,8 +124,23 @@ func Scan(url string, threads int) {
 	}
 	processGroup.Wait()
 
-	fmt.Println(dirs)
-	fmt.Println(files)
+	sort.Strings(files)
+	sort.Strings(files)
+
+	return files, dirs
+}
+
+// Run prints the output of a scan
+func Run(url string, threads int) {
+	PrintBanner()
+	fmt.Println("Scanning: " + url)
+	vulnerable, requestMethod := CheckIfVulnerable(url)
+	fmt.Println(vulnerable)
+
+	dirs, files := Scan(url, requestMethod, threads)
+	// Add to queue
+
+	fmt.Println("Directories (x):\n" + strings.Join(files, "\n") + "\nFiles (y)" + strings.Join(dirs, "\n"))
 }
 
 // BulkScan scans multiple targets
