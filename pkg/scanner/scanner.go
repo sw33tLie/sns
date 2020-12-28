@@ -144,7 +144,10 @@ func Run(scanURL string, threads int, silent bool) {
 	vulnerable, requestMethod := CheckIfVulnerable(scanURL)
 
 	if !vulnerable {
-		log.Fatal("Target is not vulnerable")
+		if !silent {
+			fmt.Println("Target is not vulnerable")
+		}
+		return
 	}
 
 	dirs, files := Scan(scanURL, requestMethod, threads, silent)
