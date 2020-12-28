@@ -86,6 +86,7 @@ func Scan(url string, requestMethod string, threads int, silent bool, timeout in
 
 				qElem := q.(queueElem)
 
+				fmt.Printf("\r" + qElem.path)
 				sc, _ := utils.HTTPRequest(requestMethod, qElem.url+qElem.path+"*~1"+qElem.ext+"/1.aspx", "", timeout)
 				incrementRequestsCounter(1)
 
@@ -100,12 +101,12 @@ func Scan(url string, requestMethod string, threads int, silent bool, timeout in
 						}
 						if qElem.ext == "" {
 							if !silent {
-								fmt.Println("[Dir] " + qElem.path + "~1")
+								fmt.Println("[x] " + qElem.path + "~1 (Directory)")
 							}
 							dirs = append(dirs, qElem.path+"~1")
 						} else if len(qElem.ext) == 5 || !(strings.HasSuffix(qElem.ext, "*")) {
 							if !silent {
-								fmt.Println("[File] " + qElem.path + "~1" + qElem.ext)
+								fmt.Println("[x] " + qElem.path + "~1" + qElem.ext + " (File)")
 							}
 							files = append(files, qElem.path+"~1"+qElem.ext)
 						} else {
