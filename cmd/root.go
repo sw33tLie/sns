@@ -27,9 +27,9 @@ var rootCmd = &cobra.Command{
 		proxy, _ := cmd.Flags().GetString("proxy")
 		silent, _ := cmd.Flags().GetBool("silent")
 		threads, _ := cmd.Flags().GetInt("threads")
-		selectedURL, _ := cmd.Flags().GetString("url")
+		scanURL, _ := cmd.Flags().GetString("url")
 
-		if selectedURL == "" && file == "" {
+		if scanURL == "" && file == "" {
 			log.Fatal("No URL(s) to scan provided")
 		}
 
@@ -42,8 +42,8 @@ var rootCmd = &cobra.Command{
 			http.DefaultTransport.(*http.Transport).Proxy = http.ProxyURL(proxyURL)
 		}
 
-		if selectedURL != "" {
-			scanner.Run(selectedURL, threads, silent)
+		if scanURL != "" {
+			scanner.Run(scanURL, threads, silent)
 			return
 		}
 

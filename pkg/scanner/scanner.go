@@ -3,6 +3,7 @@ package scanner
 import (
 	"fmt"
 	"log"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -131,21 +132,28 @@ func Scan(url string, requestMethod string, threads int, silent bool) (files []s
 }
 
 // Run prints the output of a scan
-func Run(url string, threads int, silent bool) {
+func Run(scanURL string, threads int, silent bool) {
 	startTime := time.Now()
 
 	if !silent {
 		PrintBanner()
-		fmt.Println("Scanning: " + url)
+		fmt.Println("Scanning: " + scanURL)
 	}
 
-	vulnerable, requestMethod := CheckIfVulnerable(url)
+	parsedURL, err := url.Parse(scanURL)
+	if err != nil {
+		panic(err)
+	}
+
+	// The URL must end with /, and we ignore anything after ?
+	scanURL = parsedURL.Scheme + "://" + parsedURL.Host + strings.TrimSuffix(parsedURL.Path, "/") + "/"
+	vulnerable, requestMethod := CheckIfVulnerable(scanURL)
 
 	if !vulnerable {
 		log.Fatal("Target is not vulnerable")
 	}
 
-	dirs, files := Scan(url, requestMethod, threads, silent)
+	dirs, files := Scan(scanURL, requestMethod, threads, silent)
 
 	fmt.Println("Directories (" + strconv.Itoa(len(dirs)) + "):\n " + strings.Join(files, "\n ") + "\nFiles (" + strconv.Itoa(len(files)) + "):\n " + strings.Join(dirs, "\n "))
 
