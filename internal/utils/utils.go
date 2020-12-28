@@ -29,7 +29,11 @@ func HTTPRequest(method string, url string, data string) (statusCode int, respon
 
 	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:82.0) Gecko/20100101 Firefox/82.0")
 
-	resp, _ := client.Do(req)
+	resp, err := client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+
 	body, err := ioutil.ReadAll(resp.Body)
 
 	if err != nil {
