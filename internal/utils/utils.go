@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bytes"
+	"crypto/tls"
 	"io/ioutil"
 	"net/http"
 	"unicode/utf8"
@@ -16,7 +17,10 @@ func Abs(x int) int {
 
 // HTTPRequest Send an HTTP request
 func HTTPRequest(method string, url string, data string) (statusCode int, responseBody string) {
-	client := &http.Client{}
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
 
 	req, err := http.NewRequest(method, url, bytes.NewBuffer([]byte(data)))
 	if err != nil {
