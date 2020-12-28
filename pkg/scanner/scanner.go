@@ -2,6 +2,7 @@ package scanner
 
 import (
 	"fmt"
+	"log"
 	"sort"
 	"strconv"
 	"strings"
@@ -38,7 +39,7 @@ func CheckIfVulnerable(url string) (result bool, method string) {
 			fmt.Println(invalidStatus)
 
 			if validStatus != invalidStatus && !(acceptedDiffLength >= 0 && utils.Abs(len(invalidBody)-len(validBody)) <= acceptedDiffLength) {
-				return false, requestMethod
+				return true, requestMethod
 			}
 			//fmt.Println(string(body2))
 		}
@@ -62,7 +63,7 @@ type queueElem struct {
 	ext  string
 }
 
-func Scan(url string, requestMethod string, threads int) (files []string, dirs []string) {
+func Scan(url string, requestMethod string, threads int, silent bool) (files []string, dirs []string) {
 	queue := goconcurrentqueue.NewFIFO()
 
 	for _, char := range alphanum {
@@ -88,9 +89,7 @@ func Scan(url string, requestMethod string, threads int) (files []string, dirs [
 				qElem := q.(queueElem)
 
 				sc, _ := utils.HTTPRequest(requestMethod, qElem.url+qElem.path+"*~1"+qElem.ext+"/1.aspx", "")
-				//fmt.Println(q)
 
-				//status = self._get_status(url + '*~1' + ext + '/1.aspx')
 				if sc == 404 {
 					if len(qElem.path) < 6 {
 						for _, char := range alphanum {
@@ -101,10 +100,14 @@ func Scan(url string, requestMethod string, threads int) (files []string, dirs [
 							queue.Enqueue(queueElem{qElem.url, qElem.path, ""})
 						}
 						if qElem.ext == "" {
-							fmt.Println("FOUND DIRECTORY")
+							if !silent {
+								fmt.Println("[Dir] " + qElem.path + "~1")
+							}
 							dirs = append(dirs, qElem.path+"~1")
 						} else if len(qElem.ext) == 5 || !(strings.HasSuffix(qElem.ext, "*")) {
-							fmt.Println("FOUND FILE")
+							if !silent {
+								fmt.Println("[File] " + qElem.path + "~1" + qElem.ext)
+							}
 							files = append(files, qElem.path+"~1"+qElem.ext)
 						} else {
 							for _, char := range alphanum {
@@ -132,16 +135,25 @@ func Scan(url string, requestMethod string, threads int) (files []string, dirs [
 }
 
 // Run prints the output of a scan
-func Run(url string, threads int) {
-	PrintBanner()
-	fmt.Println("Scanning: " + url)
-	vulnerable, requestMethod := CheckIfVulnerable(url)
-	fmt.Println(vulnerable)
+func Run(url string, threads int, silent bool) {
+	if !silent {
+		PrintBanner()
+		fmt.Println("Scanning: " + url)
+	}
 
-	dirs, files := Scan(url, requestMethod, threads)
-	// Add to queue
+	vulnerable, requestMethod := CheckIfVulnerable(url)
+
+	if !vulnerable {
+		log.Fatal("Target is not vulnerable")
+	}
+
+	dirs, files := Scan(url, requestMethod, threads, silent)
 
 	fmt.Println("Directories (" + strconv.Itoa(len(dirs)) + "):\n" + strings.Join(files, "\n ") + "\nFiles (" + strconv.Itoa(len(files)) + "):\n" + strings.Join(dirs, "\n "))
+
+	if !silent {
+		fmt.Println("Took x seconds")
+	}
 }
 
 // BulkScan scans multiple targets

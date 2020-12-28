@@ -23,13 +23,14 @@ var rootCmd = &cobra.Command{
 		url, _ := cmd.Flags().GetString("url")
 		file, _ := cmd.Flags().GetString("file")
 		threads, _ := cmd.Flags().GetInt("threads")
+		silent, _ := cmd.Flags().GetBool("silent")
 
 		if url == "" && file == "" {
 			log.Fatal("No URL(s) to scan provided")
 		}
 
 		if url != "" {
-			scanner.Run(url, threads)
+			scanner.Run(url, threads, silent)
 			return
 		}
 
