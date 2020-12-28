@@ -101,12 +101,12 @@ func Scan(url string, requestMethod string, threads int, silent bool, timeout in
 						}
 						if qElem.ext == "" {
 							if !silent {
-								fmt.Println("[x] " + qElem.path + "~1 (Directory)")
+								fmt.Println("\r[x] " + qElem.path + "~1 (Directory)")
 							}
 							dirs = append(dirs, qElem.path+"~1")
 						} else if len(qElem.ext) == 5 || !(strings.HasSuffix(qElem.ext, "*")) {
 							if !silent {
-								fmt.Println("[x] " + qElem.path + "~1" + qElem.ext + " (File)")
+								fmt.Println("\r[x] " + qElem.path + "~1" + qElem.ext + " (File)")
 							}
 							files = append(files, qElem.path+"~1"+qElem.ext)
 						} else {
