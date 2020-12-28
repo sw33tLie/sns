@@ -24,7 +24,7 @@ const (
 	bannerLogo = `  ___ _ __  ___ 
  / __| '_ \/ __|
  \__ \ | | \__ \
- |___/_| |_|___/`
+ |___/_| |_|___/ v1.0`
 )
 
 // CheckIfVulnerable checks if a target is vulnerable
@@ -136,7 +136,10 @@ func Run(scanURL string, threads int, silent bool) {
 
 	parsedURL, err := url.Parse(scanURL)
 	if err != nil {
-		panic(err)
+		if !silent {
+			fmt.Println("Malformed URL, skipping...")
+		}
+		return
 	}
 
 	// The URL must end with /, and we ignore anything after ?
