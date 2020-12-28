@@ -147,7 +147,7 @@ func Run(url string, threads int, silent bool) {
 
 	dirs, files := Scan(url, requestMethod, threads, silent)
 
-	fmt.Println("Directories (" + strconv.Itoa(len(dirs)) + "):\n" + strings.Join(files, "\n ") + "\nFiles (" + strconv.Itoa(len(files)) + "):\n" + strings.Join(dirs, "\n "))
+	fmt.Println("Directories (" + strconv.Itoa(len(dirs)) + "):\n " + strings.Join(files, "\n ") + "\nFiles (" + strconv.Itoa(len(files)) + "):\n " + strings.Join(dirs, "\n "))
 
 	endTime := time.Now()
 	if !silent {
