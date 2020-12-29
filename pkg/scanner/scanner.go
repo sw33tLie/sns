@@ -86,7 +86,9 @@ func Scan(url string, requestMethod string, threads int, silent bool, timeout in
 
 				qElem := q.(queueElem)
 
-				fmt.Printf("\r /" + qElem.path)
+				if !silent {
+					fmt.Printf("\r /" + qElem.path)
+				}
 				sc, _ := utils.HTTPRequest(requestMethod, qElem.url+qElem.path+"*~1"+qElem.ext+"/1.aspx", "", timeout)
 				incrementRequestsCounter(1)
 
