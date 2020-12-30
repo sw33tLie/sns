@@ -173,7 +173,7 @@ func Run(scanURL string, threads int, silent bool, timeout int, proxy string) {
 
 	dirs, files := Scan(scanURL, requestMethod, threads, silent, timeout)
 
-	fmt.Println("\n" + bar + "\n\nDirectories (" + strconv.Itoa(len(dirs)) + "):\n =======\n " + strings.Join(files, "\n ") + "\n\nFiles (" + strconv.Itoa(len(files)) + "):\n =======\n " + strings.Join(dirs, "\n "))
+	fmt.Println("\n" + bar + "\n\nDirectories (" + strconv.Itoa(len(dirs)) + "):\nn " + strings.Join(files, "\n ") + "\n\nFiles (" + strconv.Itoa(len(files)) + "):\n\n " + strings.Join(dirs, "\n "))
 
 	endTime := time.Now()
 	if !silent {
