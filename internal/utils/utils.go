@@ -9,6 +9,10 @@ import (
 	"unicode/utf8"
 )
 
+const (
+	DEFAULT_TIMEOUT = 30
+)
+
 func Abs(x int) int {
 	if x < 0 {
 		return -x
@@ -16,17 +20,17 @@ func Abs(x int) int {
 	return x
 }
 
+var tr = &http.Transport{
+	TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	Proxy:           http.DefaultTransport.(*http.Transport).Proxy,
+}
+var client = &http.Client{Transport: tr, Timeout: time.Duration(DEFAULT_TIMEOUT) * time.Second}
+
 // HTTPRequest Send an HTTP request
 func HTTPRequest(method string, url string, data string, timeoutSeconds int) (statusCode int, responseBody string) {
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		Proxy:           http.DefaultTransport.(*http.Transport).Proxy,
+	if timeoutSeconds != DEFAULT_TIMEOUT {
+		client.Timeout = time.Duration(timeoutSeconds) * time.Second
 	}
-	client := &http.Client{
-		Transport: tr,
-		Timeout:   time.Duration(timeoutSeconds) * time.Second,
-	}
-
 	req, err := http.NewRequest(method, url, bytes.NewBuffer([]byte(data)))
 	if err != nil {
 		panic(err)
