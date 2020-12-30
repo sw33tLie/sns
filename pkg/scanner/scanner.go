@@ -7,12 +7,12 @@ import (
 	"net/url"
 	"os"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/enriquebris/goconcurrentqueue"
+	"github.com/olekukonko/tablewriter"
 	"github.com/sw33tLie/sns/internal/utils"
 )
 
@@ -171,9 +171,25 @@ func Run(scanURL string, threads int, silent bool, timeout int, proxy string) {
 		return
 	}
 
-	dirs, files := Scan(scanURL, requestMethod, threads, silent, timeout)
+	files, dirs := Scan(scanURL, requestMethod, threads, silent, timeout)
 
-	fmt.Println("\n" + bar + "\n\nDirectories (" + strconv.Itoa(len(dirs)) + "):\n\n " + strings.Join(files, "\n ") + "\n\nFiles (" + strconv.Itoa(len(files)) + "):\n\n " + strings.Join(dirs, "\n "))
+	// Let's print the results in a nice table
+	var tableData [][]string
+	for _, row := range dirs {
+		tableData = append(tableData, []string{row, "Not validated", "Directory"})
+	}
+
+	for _, row := range files {
+		tableData = append(tableData, []string{row, "Not validated", "File"})
+	}
+
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Shortname", "Status", "Type"})
+
+	for _, v := range tableData {
+		table.Append(v)
+	}
+	table.Render()
 
 	endTime := time.Now()
 	if !silent {
