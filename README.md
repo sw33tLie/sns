@@ -6,6 +6,11 @@ Make sure you've a recent version of the Go compiler installed on your system. T
 ```
 GO111MODULE=on go get -u github.com/sw33tLie/sns
 ```
+If you are on Windows:
+```
+set GO111MODULE=on
+go get -u github.com/sw33tLie/sns
+```
 
 ## Usage
 ```
