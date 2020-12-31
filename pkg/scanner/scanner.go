@@ -54,8 +54,8 @@ func CheckIfVulnerable(url string, timeout int) (result bool, method string) {
 	for _, requestMethod := range requestMethods {
 		for _, magicFinalPart := range magicFinalParts {
 			// First Request
-			validStatus, validBody := utils.HTTPRequest(requestMethod, url+asteriskSymbol+"~1"+asteriskSymbol+magicFinalPart, "", timeout)
-			invalidStatus, invalidBody := utils.HTTPRequest(requestMethod, url+"/1234567890"+asteriskSymbol+"~1"+asteriskSymbol+magicFinalPart, "", timeout)
+			validStatus, validBody := utils.HTTPRequest(requestMethod, url+asteriskSymbol+"~1"+asteriskSymbol+magicFinalPart, "")
+			invalidStatus, invalidBody := utils.HTTPRequest(requestMethod, url+"/1234567890"+asteriskSymbol+"~1"+asteriskSymbol+magicFinalPart, "")
 			incrementRequestsCounter(2)
 
 			acceptedDiffLength := 10
@@ -69,7 +69,7 @@ func CheckIfVulnerable(url string, timeout int) (result bool, method string) {
 	return false, ""
 }
 
-func Scan(url string, requestMethod string, threads int, silent bool, timeout int) (files []string, dirs []string) {
+func Scan(url string, requestMethod string, threads int, silent bool) (files []string, dirs []string) {
 	queue := goconcurrentqueue.NewFIFO()
 
 	for _, char := range alphanum {
@@ -89,7 +89,7 @@ func Scan(url string, requestMethod string, threads int, silent bool, timeout in
 				if !silent {
 					fmt.Printf("\r /" + qElem.path)
 				}
-				sc, _ := utils.HTTPRequest(requestMethod, qElem.url+qElem.path+"*~1"+qElem.ext+"/1.aspx", "", timeout)
+				sc, _ := utils.HTTPRequest(requestMethod, qElem.url+qElem.path+"*~1"+qElem.ext+"/1.aspx", "")
 				incrementRequestsCounter(1)
 
 				if sc == 404 {
@@ -171,20 +171,32 @@ func Run(scanURL string, threads int, silent bool, timeout int, proxy string) {
 		return
 	}
 
-	files, dirs := Scan(scanURL, requestMethod, threads, silent, timeout)
+	files, dirs := Scan(scanURL, requestMethod, threads, silent)
 
+	fmt.Println("\n" + bar + "\n\n")
 	// Let's print the results in a nice table
 	var tableData [][]string
 	for _, row := range dirs {
-		tableData = append(tableData, []string{row, "Not validated", "Directory"})
+		tableData = append(tableData, []string{row, "Not found", "Directory"})
 	}
 
 	for _, row := range files {
-		tableData = append(tableData, []string{row, "Not validated", "File"})
+		tableData = append(tableData, []string{row, "Not found", "File"})
 	}
 
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Shortname", "Status", "Type"})
+	table.SetHeader([]string{"SHORTNAME", "FULL NAME", "TYPE"})
+	table.SetAutoWrapText(false)
+	table.SetAutoFormatHeaders(true)
+	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
+	table.SetAlignment(tablewriter.ALIGN_LEFT)
+	table.SetCenterSeparator("")
+	table.SetColumnSeparator("")
+	table.SetRowSeparator("")
+	table.SetHeaderLine(false)
+	table.SetBorder(false)
+	table.SetTablePadding("\t") // pad with tabs
+	table.SetNoWhiteSpace(true)
 
 	for _, v := range tableData {
 		table.Append(v)

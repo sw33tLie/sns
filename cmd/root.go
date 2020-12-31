@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/sw33tLie/sns/pkg/scanner"
@@ -16,6 +17,23 @@ import (
 )
 
 var cfgFile string
+
+/*
+
+var tr = &http.Transport{
+	TLSClientConfig: &tls.Config{
+		InsecureSkipVerify: true,
+		Renegotiation:      tls.RenegotiateOnceAsClient,
+	},
+	Proxy: http.DefaultTransport.(*http.Transport).Proxy,
+}
+var client = &http.Client{
+	Transport: tr,
+	Timeout:   time.Duration(DEFAULT_TIMEOUT) * time.Second,
+}
+
+
+*/
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -34,12 +52,19 @@ var rootCmd = &cobra.Command{
 			log.Fatal("No URL(s) to scan provided")
 		}
 
+		// Ignore various SSL issues - not our problem :)
+		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true,
+			Renegotiation:      tls.RenegotiateOnceAsClient,
+		}
+
+		http.DefaultClient.Timeout = time.Duration(timeout) * time.Second
+
 		if proxy != "" {
 			proxyURL, err := url.Parse(proxy)
 			if err != nil {
 				log.Fatal("Invalid Proxy String")
 			}
-			http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 			http.DefaultTransport.(*http.Transport).Proxy = http.ProxyURL(proxyURL)
 		}
 
@@ -76,7 +101,7 @@ func init() {
 	rootCmd.Flags().StringP("proxy", "", "", "HTTP Proxy (Useful for debugging. Example: http://127.0.0.1:8080)")
 	rootCmd.Flags().StringP("url", "u", "", "URL to scan")
 	rootCmd.Flags().IntP("threads", "t", 50, "Threads")
-	rootCmd.Flags().IntP("timeout", "", 10, "HTTP requests timeout")
+	rootCmd.Flags().IntP("timeout", "", 30, "HTTP requests timeout")
 	rootCmd.Flags().BoolP("color", "c", false, "Use colored output")
 	rootCmd.Flags().BoolP("silent", "s", false, "Silent output")
 	rootCmd.Flags().BoolP("banner", "b", false, "Silent output")
