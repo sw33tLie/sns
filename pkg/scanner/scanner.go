@@ -10,9 +10,10 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"github.com/orcaman/concurrent-map"
+
 	"github.com/enriquebris/goconcurrentqueue"
 	"github.com/olekukonko/tablewriter"
+	cmap "github.com/orcaman/concurrent-map"
 	"github.com/sw33tLie/sns/internal/utils"
 )
 
@@ -36,10 +37,9 @@ type queueElem struct {
 }
 
 type mapElem struct {
-	count  int
-	found  bool 
+	count int
+	found bool
 }
-
 
 func printBanner() {
 	fmt.Println(bannerLogo + "\n\n IIS shortname scanner by sw33tLie\n" + bar + "\n")
@@ -140,15 +140,15 @@ func Scan(url string, requestMethod string, threads int, silent bool) (files []s
 				prevPath := utils.TrimLastChar(qElem.path)
 				if tmp, ok := m.Get(prevPath); ok {
 					if found {
-						m.Set(prevPath, mapElem{tmp.(mapElem).count-1, true})
+						m.Set(prevPath, mapElem{tmp.(mapElem).count - 1, true})
 					} else {
-						m.Set(prevPath, mapElem{tmp.(mapElem).count-1, tmp.(mapElem).found})
+						m.Set(prevPath, mapElem{tmp.(mapElem).count - 1, tmp.(mapElem).found})
 					}
 					if tmp.(mapElem).count == 0 && tmp.(mapElem).found == false {
-						// we found a file with a len(shortname) < 6 
+						// we found a file with a len(shortname) < 6
 						queue.Enqueue(queueElem{qElem.url, prevPath, ".*", true})
 					}
-					
+
 				} else {
 					if found {
 						m.Set(prevPath, mapElem{len(alphanum) - 2, true})
