@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 	"time"
-
+	"github.com/orcaman/concurrent-map"
 	"github.com/enriquebris/goconcurrentqueue"
 	"github.com/olekukonko/tablewriter"
 	"github.com/sw33tLie/sns/internal/utils"
@@ -29,10 +29,17 @@ const (
 )
 
 type queueElem struct {
-	url  string
-	path string
-	ext  string
+	url     string
+	path    string
+	ext     string
+	shorter bool
 }
+
+type mapElem struct {
+	count  int
+	found  bool 
+}
+
 
 func printBanner() {
 	fmt.Println(bannerLogo + "\n\n IIS shortname scanner by sw33tLie\n" + bar + "\n")
@@ -71,9 +78,11 @@ func CheckIfVulnerable(url string, timeout int) (result bool, method string) {
 
 func Scan(url string, requestMethod string, threads int, silent bool) (files []string, dirs []string) {
 	queue := goconcurrentqueue.NewFIFO()
+	cmap.New()
+	m := cmap.New()
 
 	for _, char := range alphanum {
-		queue.Enqueue(queueElem{url, string(char), ".*"})
+		queue.Enqueue(queueElem{url, string(char), ".*", false})
 	}
 
 	processGroup := new(sync.WaitGroup)
@@ -82,8 +91,10 @@ func Scan(url string, requestMethod string, threads int, silent bool) (files []s
 	for i := 0; i < threads; i++ {
 		go func() {
 			for queue.GetLen() > 0 {
-				q, _ := queue.Dequeue()
-
+				q, err := queue.Dequeue()
+				if err != nil {
+					log.Fatal("QUEUE WAS NIL")
+				}
 				qElem := q.(queueElem)
 
 				if !silent {
@@ -91,16 +102,20 @@ func Scan(url string, requestMethod string, threads int, silent bool) (files []s
 				}
 				sc, _ := utils.HTTPRequest(requestMethod, qElem.url+qElem.path+"*~1"+qElem.ext+"/1.aspx", "")
 				incrementRequestsCounter(1)
+				found := false
 
 				if sc == 404 {
-					if len(qElem.path) < 6 {
+					found = true
+
+					if len(qElem.path) < 6 && !qElem.shorter {
 						for _, char := range alphanum {
-							queue.Enqueue(queueElem{qElem.url, qElem.path + string(char), qElem.ext})
+							queue.Enqueue(queueElem{qElem.url, qElem.path + string(char), qElem.ext, qElem.shorter})
 						}
 					} else {
 						if qElem.ext == ".*" {
-							queue.Enqueue(queueElem{qElem.url, qElem.path, ""})
+							queue.Enqueue(queueElem{qElem.url, qElem.path, "", qElem.shorter})
 						}
+
 						if qElem.ext == "" {
 							if !silent {
 								fmt.Println("\r - " + qElem.path + "~1 (Directory)")
@@ -113,12 +128,32 @@ func Scan(url string, requestMethod string, threads int, silent bool) (files []s
 							files = append(files, qElem.path+"~1"+qElem.ext)
 						} else {
 							for _, char := range alphanum {
-								queue.Enqueue(queueElem{qElem.url, qElem.path, utils.TrimLastChar(qElem.ext) + string(char) + "*"})
+								queue.Enqueue(queueElem{qElem.url, qElem.path, utils.TrimLastChar(qElem.ext) + string(char) + "*", qElem.shorter})
 								if len(qElem.ext) < 4 {
-									queue.Enqueue(queueElem{qElem.url, qElem.path, utils.TrimLastChar(qElem.ext) + string(char)})
+									queue.Enqueue(queueElem{qElem.url, qElem.path, utils.TrimLastChar(qElem.ext) + string(char), qElem.shorter})
 								}
 							}
 						}
+					}
+				}
+
+				prevPath := utils.TrimLastChar(qElem.path)
+				if tmp, ok := m.Get(prevPath); ok {
+					if found {
+						m.Set(prevPath, mapElem{tmp.(mapElem).count-1, true})
+					} else {
+						m.Set(prevPath, mapElem{tmp.(mapElem).count-1, tmp.(mapElem).found})
+					}
+					if tmp.(mapElem).count == 0 && tmp.(mapElem).found == false {
+						// we found a file with a len(shortname) < 6 
+						queue.Enqueue(queueElem{qElem.url, prevPath, ".*", true})
+					}
+					
+				} else {
+					if found {
+						m.Set(prevPath, mapElem{len(alphanum) - 2, true})
+					} else {
+						m.Set(prevPath, mapElem{len(alphanum) - 2, false})
 					}
 				}
 			}
