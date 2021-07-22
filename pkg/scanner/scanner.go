@@ -71,7 +71,16 @@ func printBanner() {
 	fmt.Println(string(logo) + "\n" + bar + "\n")
 }
 
-func CheckIfVulnerable(url string, timeout int, threads int, checkOnly bool) (result bool, method string) {
+func CheckIfVulnerable(scanURL string, timeout int, threads int, checkOnly bool) (result bool, method string) {
+
+	parsedURL, err := url.Parse(scanURL)
+	if err != nil {
+		println("Malformed URL, skipping...")
+		return
+	}
+
+	// The URL must end with /, and we ignore anything after ?
+	scanURL = parsedURL.Scheme + "://" + parsedURL.Host + strings.TrimSuffix(parsedURL.Path, "/") + "/"
 
 	checks := make(chan *checker, threads)
 	processGroup := new(sync.WaitGroup)
@@ -99,7 +108,7 @@ func CheckIfVulnerable(url string, timeout int, threads int, checkOnly bool) (re
 					vulnMethod = check.method
 
 					if checkOnly {
-						fmt.Println("[VULNERABLE-" + vulnMethod + "] " + url)
+						fmt.Println("[VULNERABLE-" + vulnMethod + "] " + scanURL)
 						os.Exit(0)
 					}
 				}
@@ -112,8 +121,8 @@ func CheckIfVulnerable(url string, timeout int, threads int, checkOnly bool) (re
 		for _, magicFinalPart := range magicFinalParts {
 			checks <- &checker{
 				method: requestMethod,
-				url1:   url + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart,
-				url2:   url + "/1234567890" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart,
+				url1:   scanURL + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart,
+				url2:   scanURL + "/1234567890" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart,
 			}
 		}
 	}
