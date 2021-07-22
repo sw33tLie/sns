@@ -2,6 +2,7 @@ package scanner
 
 import (
 	"bufio"
+	"encoding/base64"
 	"fmt"
 	"log"
 	"net/url"
@@ -12,7 +13,6 @@ import (
 	"time"
 
 	"github.com/enriquebris/goconcurrentqueue"
-	"github.com/olekukonko/tablewriter"
 	cmap "github.com/orcaman/concurrent-map"
 	"github.com/sw33tLie/sns/internal/utils"
 )
@@ -22,11 +22,21 @@ var requestMethods = [7]string{"OPTIONS", "GET", "POST", "HEAD", "TRACE", "TRACK
 var alphanum = "abcdefghijklmnopqrstuvwxyz0123456789_-"
 
 const (
-	bannerLogo = `  ___ _ __  ___ 
- / __| '_ \/ __|
- \__ \ | | \__ \
- |___/_| |_|___/ v1.0`
-	bar = "________________________________________________"
+	logoBase64 = "ICBfX18gXyBfXyAgX19fCiAvIF9ffCAnXyBcLyBfX3wgICAgICAgICAgIElJUyBTaG9ydG5hbWUgU2Nhbm5lcgogXF9fIFwgfCB8IFxfXyBcICAgICAgICAgICAgICAgICAgICAgYnkgc3czM3RMaWUKIHxfX18vX3wgfF98X19fLyB2MS4x"
+	bar        = "________________________________________________"
+)
+
+// Colors
+const (
+	COLOR_RESET  = "\033[0m"
+	COLOR_RED    = "\033[31m"
+	COLOR_GREEN  = "\033[32m"
+	COLOR_YELLOW = "\033[33m"
+	COLOR_BLUE   = "\033[34m"
+	COLOR_PURPLE = "\033[35m"
+	COLOR_CYAN   = "\033[36m"
+	COLOR_GRAY   = "\033[37m"
+	COLOR_WHITE  = "\033[97m"
 )
 
 type queueElem struct {
@@ -42,7 +52,8 @@ type mapElem struct {
 }
 
 func printBanner() {
-	fmt.Println(bannerLogo + "\n\n IIS shortname scanner by sw33tLie\n" + bar + "\n")
+	logo, _ := base64.StdEncoding.DecodeString(logoBase64)
+	fmt.Println(string(logo) + "\n" + bar + "\n")
 }
 
 var requestsCounter int
@@ -122,10 +133,17 @@ func Scan(url string, requestMethod string, threads int, silent bool) (files []s
 							}
 							dirs = append(dirs, qElem.path+"~1")
 						} else if len(qElem.ext) == 5 || !(strings.HasSuffix(qElem.ext, "*")) {
+							fileName := qElem.path + "~1" + qElem.ext
+
 							if !silent {
-								fmt.Println("\r - " + qElem.path + "~1" + qElem.ext + " (File)")
+								color := ""
+								if fileName == "web~1.con*" {
+									fileName = "web.config"
+									color = COLOR_GREEN
+								}
+								fmt.Println("\r " + color + "- " + fileName + " (File)" + COLOR_RESET)
 							}
-							files = append(files, qElem.path+"~1"+qElem.ext)
+							files = append(files, fileName)
 						} else {
 							for _, char := range alphanum {
 								queue.Enqueue(queueElem{qElem.url, qElem.path, utils.TrimLastChar(qElem.ext) + string(char) + "*", qElem.shorter})
@@ -206,41 +224,11 @@ func Run(scanURL string, threads int, silent bool, timeout int, proxy string) {
 		return
 	}
 
-	files, dirs := Scan(scanURL, requestMethod, threads, silent)
-
-	fmt.Println("\n" + bar + "\n\n")
-	// Let's print the results in a nice table
-	var tableData [][]string
-	for _, row := range dirs {
-		tableData = append(tableData, []string{row, "Not found", "Directory"})
-	}
-
-	for _, row := range files {
-		tableData = append(tableData, []string{row, "Not found", "File"})
-	}
-
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"SHORTNAME", "FULL NAME", "TYPE"})
-	table.SetAutoWrapText(false)
-	table.SetAutoFormatHeaders(true)
-	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
-	table.SetAlignment(tablewriter.ALIGN_LEFT)
-	table.SetCenterSeparator("")
-	table.SetColumnSeparator("")
-	table.SetRowSeparator("")
-	table.SetHeaderLine(false)
-	table.SetBorder(false)
-	table.SetTablePadding("\t") // pad with tabs
-	table.SetNoWhiteSpace(true)
-
-	for _, v := range tableData {
-		table.Append(v)
-	}
-	table.Render()
+	Scan(scanURL, requestMethod, threads, silent)
 
 	endTime := time.Now()
 	if !silent {
-		fmt.Println("Done! Requests:", requestsCounter, " Time:", endTime.Sub(startTime))
+		fmt.Println(bar+"\nDone! Requests:", requestsCounter, " Time:", endTime.Sub(startTime))
 	}
 }
 
