@@ -42,6 +42,7 @@ var rootCmd = &cobra.Command{
 	Long:  `A IIS shortname scanner written in Go`,
 	Run: func(cmd *cobra.Command, args []string) {
 		file, _ := cmd.Flags().GetString("file")
+		check, _ := cmd.Flags().GetBool("check")
 		proxy, _ := cmd.Flags().GetString("proxy")
 		scanURL, _ := cmd.Flags().GetString("url")
 		silent, _ := cmd.Flags().GetBool("silent")
@@ -69,11 +70,21 @@ var rootCmd = &cobra.Command{
 		}
 
 		if scanURL != "" {
+			if check {
+				scanner.CheckIfVulnerable(scanURL, timeout, threads, true)
+				return
+			}
+
 			scanner.Run(scanURL, threads, silent, timeout, proxy)
 			return
 		}
 
 		if file != "" {
+			if check {
+				scanner.BulkCheck(file, threads, timeout)
+				return
+			}
+
 			scanner.BulkScan(file, threads, silent, timeout, proxy)
 			return
 		}
@@ -105,6 +116,7 @@ func init() {
 	rootCmd.Flags().BoolP("color", "c", false, "Use colored output")
 	rootCmd.Flags().BoolP("silent", "s", false, "Silent output")
 	rootCmd.Flags().BoolP("banner", "b", false, "Silent output")
+	rootCmd.Flags().BoolP("check", "", false, "Only check if vulnerable")
 
 }
 

@@ -51,9 +51,10 @@ type mapElem struct {
 	found bool
 }
 
-func printBanner() {
-	logo, _ := base64.StdEncoding.DecodeString(logoBase64)
-	fmt.Println(string(logo) + "\n" + bar + "\n")
+type checker struct {
+	method string
+	url1   string
+	url2   string
 }
 
 var requestsCounter int
@@ -65,26 +66,65 @@ func incrementRequestsCounter(by int) {
 	requestsCounter += by
 }
 
-// CheckIfVulnerable checks if a target is vulnerable
-func CheckIfVulnerable(url string, timeout int) (result bool, method string) {
+func printBanner() {
+	logo, _ := base64.StdEncoding.DecodeString(logoBase64)
+	fmt.Println(string(logo) + "\n" + bar + "\n")
+}
+
+func CheckIfVulnerable(url string, timeout int, threads int, checkOnly bool) (result bool, method string) {
+
+	checks := make(chan *checker, threads)
+	processGroup := new(sync.WaitGroup)
+	processGroup.Add(threads)
+
 	asteriskSymbol := "*"
+	acceptedDiffLength := 10
+
+	vuln := false
+	vulnMethod := ""
+	for i := 0; i < threads; i++ {
+		go func() {
+			for {
+				check := <-checks
+				if check == nil {
+					break
+				}
+
+				validStatus, validBody := utils.HTTPRequest(check.method, check.url1, "")
+				invalidStatus, invalidBody := utils.HTTPRequest(check.method, check.url2, "")
+				incrementRequestsCounter(2)
+
+				if validStatus != invalidStatus && !(acceptedDiffLength >= 0 && utils.Abs(len(invalidBody)-len(validBody)) <= acceptedDiffLength) {
+					vuln = true
+					vulnMethod = check.method
+
+					if checkOnly {
+						fmt.Println("[VULNERABLE-" + vulnMethod + "] " + url)
+						os.Exit(0)
+					}
+				}
+			}
+			processGroup.Done()
+		}()
+	}
 
 	for _, requestMethod := range requestMethods {
 		for _, magicFinalPart := range magicFinalParts {
-			// First Request
-			validStatus, validBody := utils.HTTPRequest(requestMethod, url+asteriskSymbol+"~1"+asteriskSymbol+magicFinalPart, "")
-			invalidStatus, invalidBody := utils.HTTPRequest(requestMethod, url+"/1234567890"+asteriskSymbol+"~1"+asteriskSymbol+magicFinalPart, "")
-			incrementRequestsCounter(2)
-
-			acceptedDiffLength := 10
-
-			if validStatus != invalidStatus && !(acceptedDiffLength >= 0 && utils.Abs(len(invalidBody)-len(validBody)) <= acceptedDiffLength) {
-				return true, requestMethod
+			checks <- &checker{
+				method: requestMethod,
+				url1:   url + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart,
+				url2:   url + "/1234567890" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart,
 			}
-			//fmt.Println(string(body2))
 		}
 	}
-	return false, ""
+
+	close(checks)
+	processGroup.Wait()
+
+	if checkOnly {
+		println("Target is not vulnerable")
+	}
+	return vuln, vulnMethod
 }
 
 func Scan(url string, requestMethod string, threads int, silent bool) (files []string, dirs []string) {
@@ -215,7 +255,7 @@ func Run(scanURL string, threads int, silent bool, timeout int, proxy string) {
 		fmt.Println(bar + "\n")
 	}
 
-	vulnerable, requestMethod := CheckIfVulnerable(scanURL, timeout)
+	vulnerable, requestMethod := CheckIfVulnerable(scanURL, timeout, threads, false)
 
 	if !vulnerable {
 		if !silent {
@@ -243,6 +283,24 @@ func BulkScan(filePath string, threads int, silent bool, timeout int, proxy stri
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		Run(scanner.Text(), threads, silent, timeout, proxy)
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func BulkCheck(filePath string, threads int, timeout int) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		fmt.Println("CHEKC")
+		CheckIfVulnerable(scanner.Text(), timeout, threads, true)
 	}
 
 	if err := scanner.Err(); err != nil {
