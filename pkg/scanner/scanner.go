@@ -179,6 +179,8 @@ func Scan(url string, requestMethod string, threads int, silent bool) (files []s
 						if qElem.ext == "" {
 							if !silent {
 								fmt.Println("\r - " + qElem.path + "~1 (Directory)")
+							} else {
+								fmt.Println(qElem.path + "~1 (Directory)")
 							}
 							dirs = append(dirs, qElem.path+"~1")
 						} else if len(qElem.ext) == 5 || !(strings.HasSuffix(qElem.ext, "*")) {
@@ -191,6 +193,8 @@ func Scan(url string, requestMethod string, threads int, silent bool) (files []s
 									color = COLOR_GREEN
 								}
 								fmt.Println("\r " + color + "- " + fileName + " (File)" + COLOR_RESET)
+							} else {
+								fmt.Println(fileName + " (File)")
 							}
 							files = append(files, fileName)
 						} else {
