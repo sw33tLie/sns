@@ -2,17 +2,22 @@ package scanner
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/base64"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"net/url"
 	"os"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/enriquebris/goconcurrentqueue"
+	"github.com/icza/gox/timex"
 	cmap "github.com/orcaman/concurrent-map"
 	"github.com/sw33tLie/sns/internal/utils"
 )
@@ -57,8 +62,8 @@ type checker struct {
 	url2   string
 }
 
-var requestsCounter int
-var requestsCounterMutex sync.Mutex
+var requestsCounter, errorsCounter int
+var requestsCounterMutex, errorsCounterMutex sync.Mutex
 
 func incrementRequestsCounter(by int) {
 	requestsCounterMutex.Lock()
@@ -66,9 +71,56 @@ func incrementRequestsCounter(by int) {
 	requestsCounter += by
 }
 
+func incrementErrorsCounter(by int) {
+	errorsCounterMutex.Lock()
+	defer errorsCounterMutex.Unlock()
+	errorsCounter += by
+}
+
 func printBanner() {
 	logo, _ := base64.StdEncoding.DecodeString(logoBase64)
 	fmt.Println(string(logo) + "\n" + bar + "\n")
+}
+
+func Abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
+
+// HTTPRequest Send an HTTP request
+func HTTPRequest(method string, url string, data string) (statusCode int, responseBody string) {
+	req, err := http.NewRequest(method, url, bytes.NewBuffer([]byte(data)))
+	if err != nil {
+		panic(err)
+	}
+
+	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:82.0) Gecko/20100101 Firefox/82.0")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		utils.Log.Debug(err.Error())
+		incrementErrorsCounter(1)
+		return -1, ""
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return resp.StatusCode, string(body)
+}
+
+func TrimLastChar(s string) string {
+	r, size := utf8.DecodeLastRuneInString(s)
+	if r == utf8.RuneError && (size == 0 || size == 1) {
+		size = 0
+	}
+	return s[:len(s)-size]
 }
 
 func CheckIfVulnerable(scanURL string, timeout int, threads int, checkOnly bool) (result bool, method string) {
@@ -99,11 +151,11 @@ func CheckIfVulnerable(scanURL string, timeout int, threads int, checkOnly bool)
 					break
 				}
 
-				validStatus, validBody := utils.HTTPRequest(check.method, check.url1, "")
-				invalidStatus, invalidBody := utils.HTTPRequest(check.method, check.url2, "")
+				validStatus, validBody := HTTPRequest(check.method, check.url1, "")
+				invalidStatus, invalidBody := HTTPRequest(check.method, check.url2, "")
 				incrementRequestsCounter(2)
 
-				if validStatus != invalidStatus && !(acceptedDiffLength >= 0 && utils.Abs(len(invalidBody)-len(validBody)) <= acceptedDiffLength) {
+				if validStatus != invalidStatus && !(acceptedDiffLength >= 0 && Abs(len(invalidBody)-len(validBody)) <= acceptedDiffLength) {
 					vuln = true
 					vulnMethod = check.method
 
@@ -160,7 +212,7 @@ func Scan(url string, requestMethod string, threads int, silent bool) (files []s
 				if !silent {
 					fmt.Printf("\r /" + qElem.path)
 				}
-				sc, _ := utils.HTTPRequest(requestMethod, qElem.url+qElem.path+"*~1"+qElem.ext+"/1.aspx", "")
+				sc, _ := HTTPRequest(requestMethod, qElem.url+qElem.path+"*~1"+qElem.ext+"/1.aspx", "")
 				incrementRequestsCounter(1)
 				found := false
 
@@ -199,16 +251,16 @@ func Scan(url string, requestMethod string, threads int, silent bool) (files []s
 							files = append(files, fileName)
 						} else {
 							for _, char := range alphanum {
-								queue.Enqueue(queueElem{qElem.url, qElem.path, utils.TrimLastChar(qElem.ext) + string(char) + "*", qElem.shorter})
+								queue.Enqueue(queueElem{qElem.url, qElem.path, TrimLastChar(qElem.ext) + string(char) + "*", qElem.shorter})
 								if len(qElem.ext) < 4 {
-									queue.Enqueue(queueElem{qElem.url, qElem.path, utils.TrimLastChar(qElem.ext) + string(char), qElem.shorter})
+									queue.Enqueue(queueElem{qElem.url, qElem.path, TrimLastChar(qElem.ext) + string(char), qElem.shorter})
 								}
 							}
 						}
 					}
 				}
 
-				prevPath := utils.TrimLastChar(qElem.path)
+				prevPath := TrimLastChar(qElem.path)
 				if tmp, ok := m.Get(prevPath); ok {
 					if found {
 						m.Set(prevPath, mapElem{tmp.(mapElem).count - 1, true})
@@ -272,7 +324,7 @@ func Run(scanURL string, threads int, silent bool, timeout int, proxy string) {
 
 	if !vulnerable {
 		if !silent {
-			fmt.Println("Target is not vulnerable")
+			fmt.Println("Target is not vulnerable. Requests sent:", requestsCounter, ", Errors:", errorsCounter)
 		}
 		return
 	}
@@ -281,7 +333,7 @@ func Run(scanURL string, threads int, silent bool, timeout int, proxy string) {
 
 	endTime := time.Now()
 	if !silent {
-		fmt.Println(bar+"\nDone! Requests:", requestsCounter, " Time:", endTime.Sub(startTime))
+		fmt.Println(bar+"\nDone! Requests:", requestsCounter, ", Errors:", errorsCounter, ", Time:", timex.Round(endTime.Sub(startTime), 2))
 	}
 }
 

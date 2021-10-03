@@ -14,6 +14,7 @@ import (
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
+	"github.com/sw33tLie/sns/internal/utils"
 )
 
 var cfgFile string
@@ -115,8 +116,8 @@ func init() {
 	rootCmd.Flags().IntP("timeout", "", 30, "HTTP requests timeout")
 	rootCmd.Flags().BoolP("color", "c", false, "Use colored output")
 	rootCmd.Flags().BoolP("silent", "s", false, "Silent output")
-	rootCmd.Flags().BoolP("banner", "b", false, "Silent output")
 	rootCmd.Flags().BoolP("check", "", false, "Only check if vulnerable")
+	rootCmd.PersistentFlags().StringP("loglevel", "l", "info", "Set log level. Available: debug, info, warn, error, fatal")
 
 }
 
@@ -144,4 +145,7 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
+
+	levelString, _ := rootCmd.PersistentFlags().GetString("loglevel")
+	utils.SetLogLevel(levelString)
 }
