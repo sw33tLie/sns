@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -333,7 +334,7 @@ func Run(scanURL string, threads int, silent bool, timeout int, proxy string) {
 
 	endTime := time.Now()
 	if !silent {
-		fmt.Println(bar+"\nDone! Requests:", requestsCounter, ", Errors:", errorsCounter, ", Time:", timex.Round(endTime.Sub(startTime), 2))
+		fmt.Println(bar+"\nDone! Requests: "+strconv.Itoa(requestsCounter)+", Errors: "+strconv.Itoa(errorsCounter), ", Time:", timex.Round(endTime.Sub(startTime), 2))
 	}
 }
 
