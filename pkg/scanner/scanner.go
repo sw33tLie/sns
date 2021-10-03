@@ -233,7 +233,7 @@ func Scan(url string, requestMethod string, threads int, silent bool) (files []s
 							if !silent {
 								fmt.Println("\r - " + qElem.path + "~1 (Directory)")
 							} else {
-								fmt.Println(qElem.path + "~1 (Directory)")
+								fmt.Println("  " + qElem.path + "~1 (Directory)")
 							}
 							dirs = append(dirs, qElem.path+"~1")
 						} else if len(qElem.ext) == 5 || !(strings.HasSuffix(qElem.ext, "*")) {
@@ -247,7 +247,7 @@ func Scan(url string, requestMethod string, threads int, silent bool) (files []s
 								}
 								fmt.Println("\r " + color + "- " + fileName + " (File)" + COLOR_RESET)
 							} else {
-								fmt.Println(fileName + " (File)")
+								fmt.Println("  " + fileName + " (File)")
 							}
 							files = append(files, fileName)
 						} else {
@@ -325,9 +325,13 @@ func Run(scanURL string, threads int, silent bool, timeout int, proxy string) {
 
 	if !vulnerable {
 		if !silent {
-			fmt.Println("Target is not vulnerable. Requests sent:", requestsCounter, ", Errors:", errorsCounter)
+			fmt.Println("Target is not vulnerable. Requests sent: "+strconv.Itoa(requestsCounter)+", Errors:", errorsCounter)
 		}
 		return
+	}
+
+	if silent {
+		fmt.Println(scanURL)
 	}
 
 	Scan(scanURL, requestMethod, threads, silent)
