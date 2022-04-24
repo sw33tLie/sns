@@ -92,7 +92,7 @@ func init() {
 	rootCmd.Flags().BoolP("color", "c", false, "Use colored output")
 	rootCmd.Flags().BoolP("silent", "s", false, "Silent output")
 	rootCmd.Flags().BoolP("check", "", false, "Only check if vulnerable")
-	rootCmd.Flags().StringSliceVarP(&headers, "header", "H", []string{}, "")
+	rootCmd.Flags().StringSliceVarP(&headers, "header", "H", []string{}, "Custom header. Example: -H \"X-Forwarded-For: 127.0.0.1\"")
 	rootCmd.PersistentFlags().StringP("loglevel", "l", "info", "Set log level. Available: debug, info, warn, error, fatal")
 
 }
