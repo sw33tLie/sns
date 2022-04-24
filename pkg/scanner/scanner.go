@@ -354,7 +354,7 @@ func Run(scanURL string, headers []string, threads int, silent bool, timeout int
 
 	endTime := time.Now()
 	if !silent {
-		fmt.Println(bar+"\nDone! Requests: "+strconv.Itoa(requestsCounter)+", Errors: "+strconv.Itoa(errorsCounter), ", Time:", timex.Round(endTime.Sub(startTime), 2))
+		fmt.Println("\r"+bar+"\nDone! Requests: "+strconv.Itoa(requestsCounter)+", Errors: "+strconv.Itoa(errorsCounter), ", Time:", timex.Round(endTime.Sub(startTime), 2))
 	}
 }
 
