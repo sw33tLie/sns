@@ -236,8 +236,19 @@ func Scan(url string, headers []string, requestMethod string, threads int, silen
 						}
 
 						if qElem.ext == "" {
+							fileName := qElem.path + "~1"
+
 							if !silent {
-								fmt.Println("\r - " + qElem.path + "~1 (Directory)")
+								color := ""
+								k := findKnownFile(fileName)
+								if k != "" {
+									fileName = k
+									if !nocolor {
+										color = COLOR_GREEN
+									}
+								}
+
+								fmt.Println("\r " + color + "- " + fileName + " (Directory)" + COLOR_RESET)
 							} else {
 								fmt.Println("  " + qElem.path + "~1 (Directory)")
 							}
@@ -247,8 +258,9 @@ func Scan(url string, headers []string, requestMethod string, threads int, silen
 
 							if !silent {
 								color := ""
-								if fileName == "web~1.con*" {
-									fileName = "web.config"
+								k := findKnownFile(fileName)
+								if k != "" {
+									fileName = k
 									if !nocolor {
 										color = COLOR_GREEN
 									}
@@ -391,4 +403,16 @@ func BulkCheck(filePath string, headers []string, threads int, timeout int, noco
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+var knownFiles = map[string]string{
+	"web~1.con*": "web.config",
+	"aspnet~1":   "aspnet_client",
+}
+
+func findKnownFile(shortName string) (fullName string) {
+	if val, ok := knownFiles[shortName]; ok {
+		return val
+	}
+	return ""
 }
