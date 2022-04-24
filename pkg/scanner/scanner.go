@@ -324,6 +324,14 @@ func Run(scanURL string, headers []string, threads int, silent bool, timeout int
 		fmt.Println(" Threads:", threads)
 		fmt.Println(" Timeout:", timeout)
 
+		if len(headers) > 0 {
+			fmt.Print(" Header(s): ")
+			for _, h := range headers {
+				fmt.Print(strings.Split(h, ":")[0] + ", ")
+			}
+			fmt.Println()
+		}
+
 		fmt.Println(bar + "\n")
 	}
 
