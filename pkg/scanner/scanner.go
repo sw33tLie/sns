@@ -2,10 +2,8 @@ package scanner
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -20,7 +18,7 @@ import (
 	"github.com/enriquebris/goconcurrentqueue"
 	"github.com/icza/gox/timex"
 	cmap "github.com/orcaman/concurrent-map"
-	"github.com/sw33tLie/sns/internal/utils"
+	"github.com/sw33tLie/sns/pkg/whttp"
 )
 
 var magicFinalParts = [12]string{"\\a.aspx", "\\a.asp", "/a.aspx", "/a.asp", "/a.shtml", "/a.asmx", "/a.ashx", "/a.config", "/a.php", "/a.jpg", "/webresource.axd", "/a.xxx"}
@@ -28,7 +26,7 @@ var requestMethods = [7]string{"OPTIONS", "GET", "POST", "HEAD", "TRACE", "TRACK
 var alphanum = "abcdefghijklmnopqrstuvwxyz0123456789_-"
 
 const (
-	logoBase64 = "ICBfX18gXyBfXyAgX19fCiAvIF9ffCAnXyBcLyBfX3wgICAgICAgICAgIElJUyBTaG9ydG5hbWUgU2Nhbm5lcgogXF9fIFwgfCB8IFxfXyBcICAgICAgICAgICAgICAgICAgICAgYnkgc3czM3RMaWUKIHxfX18vX3wgfF98X19fLyB2MS4x"
+	logoBase64 = "ICBfX18gXyBfXyAgX19fCiAvIF9ffCAnXyBcLyBfX3wgICAgICAgICAgIElJUyBTaG9ydG5hbWUgU2Nhbm5lcgogXF9fIFwgfCB8IFxfXyBcICAgICAgICAgICAgICAgICAgICAgYnkgc3czM3RMaWUKIHxfX18vX3wgfF98X19fLyB2MS4y"
 	bar        = "________________________________________________"
 )
 
@@ -90,32 +88,6 @@ func Abs(x int) int {
 	return x
 }
 
-// HTTPRequest Send an HTTP request
-func HTTPRequest(method string, url string, data string) (statusCode int, responseBody string) {
-	req, err := http.NewRequest(method, url, bytes.NewBuffer([]byte(data)))
-	if err != nil {
-		panic(err)
-	}
-
-	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:82.0) Gecko/20100101 Firefox/82.0")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		utils.Log.Debug(err.Error())
-		incrementErrorsCounter(1)
-		return -1, ""
-	}
-
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return resp.StatusCode, string(body)
-}
-
 func TrimLastChar(s string) string {
 	r, size := utf8.DecodeLastRuneInString(s)
 	if r == utf8.RuneError && (size == 0 || size == 1) {
@@ -124,7 +96,7 @@ func TrimLastChar(s string) string {
 	return s[:len(s)-size]
 }
 
-func CheckIfVulnerable(scanURL string, timeout int, threads int, checkOnly bool) (result bool, method string) {
+func CheckIfVulnerable(scanURL string, headers []string, timeout int, threads int, checkOnly bool) (result bool, method string) {
 
 	parsedURL, err := url.Parse(scanURL)
 	if err != nil {
@@ -152,11 +124,32 @@ func CheckIfVulnerable(scanURL string, timeout int, threads int, checkOnly bool)
 					break
 				}
 
-				validStatus, validBody := HTTPRequest(check.method, check.url1, "")
-				invalidStatus, invalidBody := HTTPRequest(check.method, check.url2, "")
+				wHeaders, customHost := whttp.MakeCustomHeaders(headers)
+				validRes, err := whttp.SendHTTPRequest(&whttp.WHTTPReq{
+					URL:        check.url1,
+					Method:     check.method,
+					Headers:    wHeaders,
+					CustomHost: customHost,
+				}, http.DefaultClient)
+
+				if err != nil {
+					incrementErrorsCounter(1)
+				}
+
+				invalidRes, err := whttp.SendHTTPRequest(&whttp.WHTTPReq{
+					URL:        check.url2,
+					Method:     check.method,
+					Headers:    wHeaders,
+					CustomHost: customHost,
+				}, http.DefaultClient)
+
+				if err != nil {
+					incrementErrorsCounter(1)
+				}
+
 				incrementRequestsCounter(2)
 
-				if validStatus != invalidStatus && !(acceptedDiffLength >= 0 && Abs(len(invalidBody)-len(validBody)) <= acceptedDiffLength) {
+				if validRes.StatusCode != invalidRes.StatusCode && !(acceptedDiffLength >= 0 && Abs(len(invalidRes.BodyString)-len(validRes.BodyString)) <= acceptedDiffLength) {
 					vuln = true
 					vulnMethod = check.method
 
@@ -189,7 +182,7 @@ func CheckIfVulnerable(scanURL string, timeout int, threads int, checkOnly bool)
 	return vuln, vulnMethod
 }
 
-func Scan(url string, requestMethod string, threads int, silent bool) (files []string, dirs []string) {
+func Scan(url string, headers []string, requestMethod string, threads int, silent bool) (files []string, dirs []string) {
 	queue := goconcurrentqueue.NewFIFO()
 	cmap.New()
 	m := cmap.New()
@@ -197,6 +190,8 @@ func Scan(url string, requestMethod string, threads int, silent bool) (files []s
 	for _, char := range alphanum {
 		queue.Enqueue(queueElem{url, string(char), ".*", false})
 	}
+
+	wHeaders, customHost := whttp.MakeCustomHeaders(headers)
 
 	processGroup := new(sync.WaitGroup)
 	processGroup.Add(threads)
@@ -213,11 +208,22 @@ func Scan(url string, requestMethod string, threads int, silent bool) (files []s
 				if !silent {
 					fmt.Printf("\r /" + qElem.path)
 				}
-				sc, _ := HTTPRequest(requestMethod, qElem.url+qElem.path+"*~1"+qElem.ext+"/1.aspx", "")
+
+				res, err := whttp.SendHTTPRequest(&whttp.WHTTPReq{
+					URL:        qElem.url + qElem.path + "*~1" + qElem.ext + "/1.aspx",
+					Method:     requestMethod,
+					Headers:    wHeaders,
+					CustomHost: customHost,
+				}, http.DefaultClient)
+
+				if err != nil {
+					incrementErrorsCounter(1)
+				}
+
 				incrementRequestsCounter(1)
 				found := false
 
-				if sc == 404 {
+				if res.StatusCode == 404 {
 					found = true
 
 					if len(qElem.path) < 6 && !qElem.shorter {
@@ -293,7 +299,7 @@ func Scan(url string, requestMethod string, threads int, silent bool) (files []s
 }
 
 // Run prints the output of a scan
-func Run(scanURL string, threads int, silent bool, timeout int, proxy string) {
+func Run(scanURL string, headers []string, threads int, silent bool, timeout int, proxy string) {
 	startTime := time.Now()
 
 	parsedURL, err := url.Parse(scanURL)
@@ -321,7 +327,7 @@ func Run(scanURL string, threads int, silent bool, timeout int, proxy string) {
 		fmt.Println(bar + "\n")
 	}
 
-	vulnerable, requestMethod := CheckIfVulnerable(scanURL, timeout, threads, false)
+	vulnerable, requestMethod := CheckIfVulnerable(scanURL, headers, timeout, threads, false)
 
 	if !vulnerable {
 		if !silent {
@@ -334,7 +340,7 @@ func Run(scanURL string, threads int, silent bool, timeout int, proxy string) {
 		fmt.Println(scanURL)
 	}
 
-	Scan(scanURL, requestMethod, threads, silent)
+	Scan(scanURL, headers, requestMethod, threads, silent)
 
 	endTime := time.Now()
 	if !silent {
@@ -343,7 +349,7 @@ func Run(scanURL string, threads int, silent bool, timeout int, proxy string) {
 }
 
 // BulkScan prints the output of a bulk scan
-func BulkScan(filePath string, threads int, silent bool, timeout int, proxy string) {
+func BulkScan(filePath string, headers []string, threads int, silent bool, timeout int, proxy string) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		log.Fatal(err)
@@ -352,7 +358,7 @@ func BulkScan(filePath string, threads int, silent bool, timeout int, proxy stri
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		Run(scanner.Text(), threads, silent, timeout, proxy)
+		Run(scanner.Text(), headers, threads, silent, timeout, proxy)
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -360,7 +366,7 @@ func BulkScan(filePath string, threads int, silent bool, timeout int, proxy stri
 	}
 }
 
-func BulkCheck(filePath string, threads int, timeout int) {
+func BulkCheck(filePath string, headers []string, threads int, timeout int) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		log.Fatal(err)
@@ -369,8 +375,7 @@ func BulkCheck(filePath string, threads int, timeout int) {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		fmt.Println("CHEKC")
-		CheckIfVulnerable(scanner.Text(), timeout, threads, true)
+		CheckIfVulnerable(scanner.Text(), headers, timeout, threads, true)
 	}
 
 	if err := scanner.Err(); err != nil {
