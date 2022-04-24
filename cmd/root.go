@@ -32,6 +32,7 @@ var rootCmd = &cobra.Command{
 		silent, _ := cmd.Flags().GetBool("silent")
 		threads, _ := cmd.Flags().GetInt("threads")
 		timeout, _ := cmd.Flags().GetInt("timeout")
+		nocolor, _ := cmd.Flags().GetBool("nocolor")
 
 		if scanURL == "" && file == "" {
 			log.Fatal("No URL(s) to scan provided")
@@ -58,17 +59,17 @@ var rootCmd = &cobra.Command{
 				return
 			}
 
-			scanner.Run(scanURL, headers, threads, silent, timeout, proxy)
+			scanner.Run(scanURL, headers, threads, silent, timeout, nocolor, proxy)
 			return
 		}
 
 		if file != "" {
 			if check {
-				scanner.BulkCheck(file, headers, threads, timeout)
+				scanner.BulkCheck(file, headers, threads, timeout, nocolor)
 				return
 			}
 
-			scanner.BulkScan(file, headers, threads, silent, timeout, proxy)
+			scanner.BulkScan(file, headers, threads, silent, timeout, nocolor, proxy)
 			return
 		}
 	},
@@ -89,7 +90,7 @@ func init() {
 	rootCmd.Flags().StringP("url", "u", "", "URL to scan")
 	rootCmd.Flags().IntP("threads", "t", 50, "Threads")
 	rootCmd.Flags().IntP("timeout", "", 30, "HTTP requests timeout")
-	rootCmd.Flags().BoolP("color", "c", false, "Use colored output")
+	rootCmd.Flags().BoolP("nocolor", "", false, "Don't use colored output")
 	rootCmd.Flags().BoolP("silent", "s", false, "Silent output")
 	rootCmd.Flags().BoolP("check", "", false, "Only check if vulnerable")
 	rootCmd.Flags().StringSliceVarP(&headers, "header", "H", []string{}, "Custom header. Example: -H \"X-Forwarded-For: 127.0.0.1\"")

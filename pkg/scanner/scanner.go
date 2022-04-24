@@ -182,7 +182,7 @@ func CheckIfVulnerable(scanURL string, headers []string, timeout int, threads in
 	return vuln, vulnMethod
 }
 
-func Scan(url string, headers []string, requestMethod string, threads int, silent bool) (files []string, dirs []string) {
+func Scan(url string, headers []string, requestMethod string, threads int, silent bool, nocolor bool) (files []string, dirs []string) {
 	queue := goconcurrentqueue.NewFIFO()
 	cmap.New()
 	m := cmap.New()
@@ -201,7 +201,7 @@ func Scan(url string, headers []string, requestMethod string, threads int, silen
 			for queue.GetLen() > 0 {
 				q, err := queue.Dequeue()
 				if err != nil {
-					log.Fatal("QUEUE WAS NIL")
+					continue
 				}
 				qElem := q.(queueElem)
 
@@ -249,7 +249,9 @@ func Scan(url string, headers []string, requestMethod string, threads int, silen
 								color := ""
 								if fileName == "web~1.con*" {
 									fileName = "web.config"
-									color = COLOR_GREEN
+									if !nocolor {
+										color = COLOR_GREEN
+									}
 								}
 								fmt.Println("\r " + color + "- " + fileName + " (File)" + COLOR_RESET)
 							} else {
@@ -293,13 +295,12 @@ func Scan(url string, headers []string, requestMethod string, threads int, silen
 	processGroup.Wait()
 
 	sort.Strings(files)
-	sort.Strings(files)
 
 	return files, dirs
 }
 
 // Run prints the output of a scan
-func Run(scanURL string, headers []string, threads int, silent bool, timeout int, proxy string) {
+func Run(scanURL string, headers []string, threads int, silent bool, timeout int, nocolor bool, proxy string) {
 	startTime := time.Now()
 
 	parsedURL, err := url.Parse(scanURL)
@@ -330,6 +331,7 @@ func Run(scanURL string, headers []string, threads int, silent bool, timeout int
 				fmt.Print(strings.Split(h, ":")[0] + ", ")
 			}
 			fmt.Println()
+
 		}
 
 		fmt.Println(bar + "\n")
@@ -348,7 +350,7 @@ func Run(scanURL string, headers []string, threads int, silent bool, timeout int
 		fmt.Println(scanURL)
 	}
 
-	Scan(scanURL, headers, requestMethod, threads, silent)
+	Scan(scanURL, headers, requestMethod, threads, silent, nocolor)
 
 	endTime := time.Now()
 	if !silent {
@@ -357,7 +359,7 @@ func Run(scanURL string, headers []string, threads int, silent bool, timeout int
 }
 
 // BulkScan prints the output of a bulk scan
-func BulkScan(filePath string, headers []string, threads int, silent bool, timeout int, proxy string) {
+func BulkScan(filePath string, headers []string, threads int, silent bool, timeout int, nocolor bool, proxy string) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		log.Fatal(err)
@@ -366,7 +368,7 @@ func BulkScan(filePath string, headers []string, threads int, silent bool, timeo
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		Run(scanner.Text(), headers, threads, silent, timeout, proxy)
+		Run(scanner.Text(), headers, threads, silent, timeout, nocolor, proxy)
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -374,7 +376,7 @@ func BulkScan(filePath string, headers []string, threads int, silent bool, timeo
 	}
 }
 
-func BulkCheck(filePath string, headers []string, threads int, timeout int) {
+func BulkCheck(filePath string, headers []string, threads int, timeout int, nocolor bool) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		log.Fatal(err)
