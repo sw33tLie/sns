@@ -12,6 +12,12 @@ set GO111MODULE=on
 go get -u github.com/sw33tLie/sns
 ```
 
+## Simply run this, to install
+
+```
+go install github.com/sw33tLie/sns@latest
+```
+
 ## Usage
 ```
 sns -u https://example.com/
