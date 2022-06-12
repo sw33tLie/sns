@@ -26,7 +26,7 @@ var requestMethods = [7]string{"OPTIONS", "GET", "POST", "HEAD", "TRACE", "TRACK
 var alphanum = "abcdefghijklmnopqrstuvwxyz0123456789_-"
 
 const (
-	logoBase64 = "ICBfX18gXyBfXyAgX19fCiAvIF9ffCAnXyBcLyBfX3wgICAgICAgICAgIElJUyBTaG9ydG5hbWUgU2Nhbm5lcgogXF9fIFwgfCB8IFxfXyBcICAgICAgICAgICAgICAgICAgICAgYnkgc3czM3RMaWUKIHxfX18vX3wgfF98X19fLyB2MS4y"
+	logoBase64 = "ICBfX18gXyBfXyAgX19fCiAvIF9ffCAnXyBcLyBfX3wgICAgICAgICAgIElJUyBTaG9ydG5hbWUgU2Nhbm5lcgogXF9fIFwgfCB8IFxfXyBcICAgICAgICAgICAgICAgICAgICAgYnkgc3czM3RMaWUKIHxfX18vX3wgfF98X19fLyB2MS4yLjE="
 	bar        = "________________________________________________"
 )
 
