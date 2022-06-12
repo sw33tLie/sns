@@ -134,6 +134,7 @@ func CheckIfVulnerable(scanURL string, headers []string, timeout int, threads in
 
 				if err != nil {
 					incrementErrorsCounter(1)
+					continue
 				}
 
 				invalidRes, err := whttp.SendHTTPRequest(&whttp.WHTTPReq{
@@ -145,6 +146,7 @@ func CheckIfVulnerable(scanURL string, headers []string, timeout int, threads in
 
 				if err != nil {
 					incrementErrorsCounter(1)
+					continue
 				}
 
 				incrementRequestsCounter(2)
@@ -218,6 +220,7 @@ func Scan(url string, headers []string, requestMethod string, threads int, silen
 
 				if err != nil {
 					incrementErrorsCounter(1)
+					continue
 				}
 
 				incrementRequestsCounter(1)
