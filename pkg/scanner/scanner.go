@@ -23,7 +23,8 @@ import (
 
 var magicFinalParts = [12]string{"\\a.aspx", "\\a.asp", "/a.aspx", "/a.asp", "/a.shtml", "/a.asmx", "/a.ashx", "/a.config", "/a.php", "/a.jpg", "/webresource.axd", "/a.xxx"}
 var requestMethods = [7]string{"OPTIONS", "GET", "POST", "HEAD", "TRACE", "TRACK", "DEBUG"}
-var alphanum = "abcdefghijklmnopqrstuvwxyz0123456789_-"
+// english frequency order
+var alphanum = "etaoinsrhdlucmfywgpbvkxqjz0123456789_-"
 
 const (
 	logoBase64 = "ICBfX18gXyBfXyAgX19fCiAvIF9ffCAnXyBcLyBfX3wgICAgICAgICAgIElJUyBTaG9ydG5hbWUgU2Nhbm5lcgogXF9fIFwgfCB8IFxfXyBcICAgICAgICAgICAgICAgICAgICAgYnkgc3czM3RMaWUKIHxfX18vX3wgfF98X19fLyB2MS4yLjE="
@@ -224,11 +225,9 @@ func Scan(url string, headers []string, requestMethod string, threads int, silen
 				}
 
 				incrementRequestsCounter(1)
-				found := false
+				found := res.StatusCode == 404
 
-				if res.StatusCode == 404 {
-					found = true
-
+				if found {
 					if len(qElem.path) < 6 && !qElem.shorter {
 						for _, char := range alphanum {
 							queue.Enqueue(queueElem{qElem.url, qElem.path + string(char), qElem.ext, qElem.shorter})
@@ -411,6 +410,7 @@ func BulkCheck(filePath string, headers []string, threads int, timeout int, noco
 var knownFiles = map[string]string{
 	"web~1.con*": "web.config",
 	"aspnet~1":   "aspnet_client",
+	"iissta~1.htm": "iisstart.html",
 }
 
 func findKnownFile(shortName string) (fullName string) {
