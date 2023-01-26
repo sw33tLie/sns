@@ -48,6 +48,7 @@ type queueElem struct {
 	url     string
 	path    string
 	ext     string
+	num     int
 	shorter bool
 }
 
@@ -98,7 +99,6 @@ func TrimLastChar(s string) string {
 }
 
 func CheckIfVulnerable(scanURL string, headers []string, timeout int, threads int, checkOnly bool) (result bool, method string) {
-
 	parsedURL, err := url.Parse(scanURL)
 	if err != nil {
 		println("Malformed URL, skipping...")
@@ -191,7 +191,7 @@ func Scan(url string, headers []string, requestMethod string, threads int, silen
 	m := cmap.New()
 
 	for _, char := range alphanum {
-		queue.Enqueue(queueElem{url, string(char), ".*", false})
+		queue.Enqueue(queueElem{url, string(char), ".*", 1, false})
 	}
 
 	wHeaders, customHost := whttp.MakeCustomHeaders(headers)
@@ -213,7 +213,7 @@ func Scan(url string, headers []string, requestMethod string, threads int, silen
 				}
 
 				res, err := whttp.SendHTTPRequest(&whttp.WHTTPReq{
-					URL:        qElem.url + qElem.path + "*~1" + qElem.ext + "/1.aspx",
+					URL:        qElem.url + qElem.path + "*~" + strconv.Itoa(qElem.num) + qElem.ext + "/1.aspx",
 					Method:     requestMethod,
 					Headers:    wHeaders,
 					CustomHost: customHost,
@@ -230,53 +230,53 @@ func Scan(url string, headers []string, requestMethod string, threads int, silen
 				if found {
 					if len(qElem.path) < 6 && !qElem.shorter {
 						for _, char := range alphanum {
-							queue.Enqueue(queueElem{qElem.url, qElem.path + string(char), qElem.ext, qElem.shorter})
+							queue.Enqueue(queueElem{qElem.url, qElem.path + string(char), qElem.ext, qElem.num, qElem.shorter})
 						}
 					} else {
 						if qElem.ext == ".*" {
-							queue.Enqueue(queueElem{qElem.url, qElem.path, "", qElem.shorter})
+							queue.Enqueue(queueElem{qElem.url, qElem.path, "", qElem.num, qElem.shorter})
 						}
-
 						if qElem.ext == "" {
-							fileName := qElem.path + "~1"
-
+							fileName := findKnownFile(qElem.path + "~" + strconv.Itoa(qElem.num))
 							if !silent {
 								color := ""
-								k := findKnownFile(fileName)
-								if k != "" {
-									fileName = k
-									if !nocolor {
-										color = COLOR_GREEN
-									}
+								if !nocolor {
+									color = COLOR_GREEN
 								}
-
 								fmt.Println("\r " + color + "- " + fileName + " (Directory)" + COLOR_RESET)
 							} else {
-								fmt.Println("  " + qElem.path + "~1 (Directory)")
+								fmt.Println("  " + fileName + " (Directory)")
 							}
-							dirs = append(dirs, qElem.path+"~1")
+							// checking if more than one dir exists with prefix, this implementation wastes some reqs
+							if qElem.num == 1 && len(qElem.path) == 6 {
+								for i := 2; i < 10; i++ {
+									queue.Enqueue(queueElem{qElem.url, qElem.path, qElem.ext, i, qElem.shorter})
+								}
+							}
+							dirs = append(dirs, fileName)
 						} else if len(qElem.ext) == 5 || !(strings.HasSuffix(qElem.ext, "*")) {
-							fileName := qElem.path + "~1" + qElem.ext
-
+							fileName := findKnownFile(qElem.path + "~" + strconv.Itoa(qElem.num) + qElem.ext)
 							if !silent {
 								color := ""
-								k := findKnownFile(fileName)
-								if k != "" {
-									fileName = k
-									if !nocolor {
-										color = COLOR_GREEN
-									}
+								if !nocolor {
+									color = COLOR_GREEN
 								}
 								fmt.Println("\r " + color + "- " + fileName + " (File)" + COLOR_RESET)
 							} else {
 								fmt.Println("  " + fileName + " (File)")
 							}
+							// checking if more than one file exists with prefix, this implementation wastes some reqs
+							if qElem.num == 1 && len(qElem.path) == 6 {
+								for i := 2; i < 10; i++ {
+									queue.Enqueue(queueElem{qElem.url, qElem.path, qElem.ext, i, qElem.shorter})
+								}
+							}
 							files = append(files, fileName)
 						} else {
 							for _, char := range alphanum {
-								queue.Enqueue(queueElem{qElem.url, qElem.path, TrimLastChar(qElem.ext) + string(char) + "*", qElem.shorter})
+								queue.Enqueue(queueElem{qElem.url, qElem.path, TrimLastChar(qElem.ext) + string(char) + "*", qElem.num, qElem.shorter})
 								if len(qElem.ext) < 4 {
-									queue.Enqueue(queueElem{qElem.url, qElem.path, TrimLastChar(qElem.ext) + string(char), qElem.shorter})
+									queue.Enqueue(queueElem{qElem.url, qElem.path, TrimLastChar(qElem.ext) + string(char), qElem.num, qElem.shorter})
 								}
 							}
 						}
@@ -292,7 +292,7 @@ func Scan(url string, headers []string, requestMethod string, threads int, silen
 					}
 					if tmp.(mapElem).count == 0 && tmp.(mapElem).found == false {
 						// we found a file with a len(shortname) < 6
-						queue.Enqueue(queueElem{qElem.url, prevPath, ".*", true})
+						queue.Enqueue(queueElem{qElem.url, prevPath, ".*", qElem.num, true})
 					}
 
 				} else {
@@ -417,5 +417,5 @@ func findKnownFile(shortName string) (fullName string) {
 	if val, ok := knownFiles[shortName]; ok {
 		return val
 	}
-	return ""
+	return shortName
 }
