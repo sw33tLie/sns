@@ -98,7 +98,7 @@ func TrimLastChar(s string) string {
 	return s[:len(s)-size]
 }
 
-func CheckIfVulnerable(scanURL string, headers []string, timeout int, threads int, checkOnly bool) (result bool, method string) {
+func CheckIfVulnerable(scanURL string, headers []string, timeout int, threads int, checkOnly bool, bulkCheck bool) (result bool, method string) {
 	parsedURL, err := url.Parse(scanURL)
 	if err != nil {
 		println("Malformed URL, skipping...")
@@ -158,7 +158,9 @@ func CheckIfVulnerable(scanURL string, headers []string, timeout int, threads in
 
 					if checkOnly {
 						fmt.Println("[VULNERABLE-" + vulnMethod + "] " + scanURL)
-						os.Exit(0)
+						if !bulkCheck {
+							os.Exit(0)
+						}
 					}
 				}
 			}
@@ -351,7 +353,7 @@ func Run(scanURL string, headers []string, threads int, silent bool, timeout int
 		fmt.Println(bar + "\n")
 	}
 
-	vulnerable, requestMethod := CheckIfVulnerable(scanURL, headers, timeout, threads, false)
+	vulnerable, requestMethod := CheckIfVulnerable(scanURL, headers, timeout, threads, false, false)
 
 	if !vulnerable {
 		if !silent {
@@ -399,7 +401,7 @@ func BulkCheck(filePath string, headers []string, threads int, timeout int, noco
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		CheckIfVulnerable(scanner.Text(), headers, timeout, threads, true)
+		CheckIfVulnerable(scanner.Text(), headers, timeout, threads, true, true)
 	}
 
 	if err := scanner.Err(); err != nil {
