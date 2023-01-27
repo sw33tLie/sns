@@ -55,7 +55,7 @@ var rootCmd = &cobra.Command{
 
 		if scanURL != "" {
 			if check {
-				scanner.CheckIfVulnerable(scanURL, headers, timeout, threads, true)
+				scanner.CheckIfVulnerable(scanURL, headers, timeout, threads, true, false)
 				return
 			}
 
