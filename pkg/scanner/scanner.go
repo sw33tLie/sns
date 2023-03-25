@@ -249,11 +249,9 @@ func Scan(url string, headers []string, requestMethod string, threads int, silen
 							} else {
 								fmt.Println("  " + fileName + " (Directory)")
 							}
-							// checking if more than one dir exists with prefix, this implementation wastes some reqs
-							if qElem.num == 1 && len(qElem.path) == 6 {
-								for i := 2; i < 10; i++ {
-									queue.Enqueue(queueElem{qElem.url, qElem.path, qElem.ext, i, qElem.shorter})
-								}
+							// checking if more than one dir exists with prefix
+							if qElem.num < 9 && len(qElem.path) == 6 {
+								queue.Enqueue(queueElem{qElem.url, qElem.path, qElem.ext, qElem.num+1, qElem.shorter})
 							}
 							dirs = append(dirs, fileName)
 						} else if len(qElem.ext) == 5 || !(strings.HasSuffix(qElem.ext, "*")) {
@@ -267,11 +265,9 @@ func Scan(url string, headers []string, requestMethod string, threads int, silen
 							} else {
 								fmt.Println("  " + fileName + " (File)")
 							}
-							// checking if more than one file exists with prefix, this implementation wastes some reqs
-							if qElem.num == 1 && len(qElem.path) == 6 {
-								for i := 2; i < 10; i++ {
-									queue.Enqueue(queueElem{qElem.url, qElem.path, qElem.ext, i, qElem.shorter})
-								}
+							// checking if more than one file exists with prefix
+							if qElem.num < 9 && len(qElem.path) == 6 {
+								queue.Enqueue(queueElem{qElem.url, qElem.path, qElem.ext, qElem.num+1, qElem.shorter})
 							}
 							files = append(files, fileName)
 						} else {
@@ -285,6 +281,7 @@ func Scan(url string, headers []string, requestMethod string, threads int, silen
 					}
 				}
 
+				// logic for identifying files with len < 6
 				prevPath := TrimLastChar(qElem.path)
 				if tmp, ok := m.Get(prevPath); ok {
 					if found {
@@ -296,13 +293,8 @@ func Scan(url string, headers []string, requestMethod string, threads int, silen
 						// we found a file with a len(shortname) < 6
 						queue.Enqueue(queueElem{qElem.url, prevPath, ".*", qElem.num, true})
 					}
-
 				} else {
-					if found {
-						m.Set(prevPath, mapElem{len(alphanum) - 2, true})
-					} else {
-						m.Set(prevPath, mapElem{len(alphanum) - 2, false})
-					}
+					m.Set(prevPath, mapElem{len(alphanum) - 2, found})
 				}
 			}
 			processGroup.Done()
